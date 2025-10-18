@@ -190,91 +190,125 @@ int main() {
     stbi_image_free(data);
 
 
+    // float vertices[] = {
+    //   // positions         // colors          // tex coords
+    //   0.5f, 0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 1.0f, // top right
+    //   0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 1.0f,   1.0f, 0.0f, // bottom right
+    //   -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, .70f,   0.0f, 0.0f,  // bottom left
+    //   -0.5f, 0.5f, 0.0f,  0.0f, 0.0f, 0.0f,   0.0f, 1.0f  // top left
+    // };
+
+
+
     float vertices[] = {
-      // positions         // colors          // tex coords
-      0.5f, 0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 1.0f, // top right
-      0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 1.0f,   1.0f, 0.0f, // bottom right
-      -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, .70f,   0.0f, 0.0f,  // bottom left
-      -0.5f, 0.5f, 0.0f,  0.0f, 0.0f, 0.0f,   0.0f, 1.0f  // top left
+        // -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+        //  0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+        //  0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        //  0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        // -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        // -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+        //
+        // -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        //  0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        //  0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+        //  0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+        // -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+        // -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        //
+        // -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        // -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        // -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        // -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        // -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        // -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        //
+        //  0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        //  0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        //  0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        //  0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        //  0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        //  0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        //
+        // -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        //  0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+        //  0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        //  0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        // -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        // -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        //
+        // -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        //  0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        //  0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        //  0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        // -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+        // -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+
+        -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
+
+        // Top
+        -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,
+
+        -0.5f,  0.5f,  0.5f, 1.0f, 0.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f, 1.0f, 0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f, 1.0f, 0.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f, 1.0f, 0.0f, 1.0f,
+
+         0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
+
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
+
+        -0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f
     };
-    unsigned int indices[] = {
-      0, 1, 3,
-      1, 2, 3
-    };
 
+    unsigned int vao, vbo;
 
-
-
-    unsigned int vao;
-    unsigned int vbo;
-    unsigned int ebo;
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
-    glGenBuffers(1, &ebo);
 
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    unsigned int posLoc, colorLoc, texCoordsLoc;
+    unsigned int posLoc, texCoordsLoc, colorLoc;
     posLoc = glGetAttribLocation(shader.programID, "aPos");
+    // texCoordsLoc = glGetAttribLocation(shader.programID, "aTexCoords");
     colorLoc = glGetAttribLocation(shader.programID, "aColor");
-    texCoordsLoc = glGetAttribLocation(shader.programID, "aTexCoords");
-    std::cout << "posLoc= " << posLoc << std::endl;
-    std::cout << "colorLoc= " << colorLoc << std::endl;
-    std::cout << "texCoordsLoc= " << texCoordsLoc << std::endl;
 
-WILO: if one of these attributes isn't used, it actually doesn't get a "spot" in the GPU memory.
-        It instead gets a location of invalid handle. Interesting! I'm curious how that works as
-          far as the pipeline for everything. Like the shader code is what decides which attributes are used
-          so what is the pipeline here?
+    glVertexAttribPointer(posLoc, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    // glVertexAttribPointer(texCoordsLoc, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(sizeof(float)*5));
+    glVertexAttribPointer(colorLoc, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)(sizeof(float)*3));
 
-    glVertexAttribPointer(posLoc, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glVertexAttribPointer(colorLoc, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(sizeof(float)*3));
-    glVertexAttribPointer(texCoordsLoc, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(sizeof(float)*5));
-
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    glEnableVertexAttribArray(2);
-
-
-    float h = 0.095f;
-    float w = 0.033;
-    float speedIndicatorBarVertices[] = {
-      0.0f, 0.0f, 0.0f, // bottom left
-      w, 0.0f, 0.0f, // bottom right
-      0.0f, h, 0.0f, // top left
-
-      w, 0.0f, 0.0f, // bottom right
-      w, h, 0.0f, // top left
-      0.0f, h, 0.0f, // top right
-    };
-
-    unsigned int speedVBO;
-    unsigned int speedVAO;
-    glGenVertexArrays(1, &speedVAO);
-    glGenBuffers(1, &speedVBO);
-
-    glBindVertexArray(speedVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, speedVBO);
-
-    glBufferData(GL_ARRAY_BUFFER, sizeof(speedIndicatorBarVertices), speedIndicatorBarVertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    Shader speedShader("src/shaders/speed.vert", "src/shaders/speed.frag");
-
-
-    float velocity = 0.1f;
-    float previousTimeValue;
-    float timeValue = 0;
-    float deltaTime;
-
-    float offsetX = 0.0f;
-    float offsetY = 0.0f;
+    glEnableVertexAttribArray(posLoc);
+    // glEnableVertexAttribArray(texCoordsLoc);
+    glEnableVertexAttribArray(colorLoc);
 
 
     // glm::mat4 trans = glm::mat4(1.0f);
@@ -286,47 +320,52 @@ WILO: if one of these attributes isn't used, it actually doesn't get a "spot" in
     // trans = glm::rotate(trans, glm::radians(90.0f), glm::vec3(0.0, 0.0, 1.0));
     // trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
 
+    glm::mat4 model = glm::mat4(1.0f);
+
+    glm::mat4 view = glm::mat4(1.0f);
+    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+
+    glm::mat4 projection;
+    projection = glm::perspective(glm::radians(45.0f), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
 
 
 
-    unsigned int transformLoc = glGetUniformLocation(shader.programID, "transform");
+
+
+    glEnable(GL_DEPTH_TEST);
 
 
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        
-
-        previousTimeValue = timeValue;
-        timeValue = glfwGetTime();
-        deltaTime = timeValue - previousTimeValue;
-        offsetX += movement.velocity * movement.directionX * deltaTime;
-        offsetY += movement.velocity * movement.directionY * deltaTime;
-
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         shader.use();
-        shader.setFloat("uOffsetX", offsetX);
-        shader.setFloat("uOffsetY", offsetY);
 
-        glm::mat4 trans = glm::mat4(1.0f);
-        trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
-        trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+        int modelLoc = glGetUniformLocation(shader.programID, "model");
+        model = glm::rotate(model, glm::radians(2.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::rotate(model, glm::radians(1.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+        int viewLoc = glGetUniformLocation(shader.programID, "view");
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
-        glBindTexture(GL_TEXTURE_2D, texture);
+        int projectionLoc = glGetUniformLocation(shader.programID, "projection");
+        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+        
+
+        // glm::mat4 trans = glm::mat4(1.0f);
+        // trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
+        // trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+        //
+        // glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+
+        // glBindTexture(GL_TEXTURE_2D, texture);
+
         glBindVertexArray(vao);
 
-        // glDrawArrays(GL_TRIANGLES, 0, 3);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
 
-        /* DRAW SPEED INDICATORS (not really speed indicators at the moment; will
-         * need to learn instancing for that) */
 
-        speedShader.use();
-        glBindVertexArray(speedVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

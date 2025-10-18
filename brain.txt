@@ -1,0 +1,12 @@
+
+10/17 WILO:
+i keep taking such long breaks between graphics tinkering sessions that I have
+to spend the entire chunk of time refreshing myself. Not only that, but I have
+different branches so where this Thinkpad was checked out to was so far behind
+wherever I last worked on it (DroneDesktop? Work PC? Not sure.).
+But I got a spinning cube set up again, albeit with no user input.
+Which reminded me that I need to go back and refresh and walk through the
+projection matrix math again (and honestly finish that article). Make a video(s)
+on it too! For your own reference later, if nothing else.
+Then keep tinkering!! Look into raytracing, continue with your software rasterizer,
+make a shitty game engine, doesn't matter. JUST. KEEP. TINKERING.
