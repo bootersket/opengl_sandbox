@@ -5,6 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+// #include <GLFW/glfw3.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <fstream>
@@ -16,65 +17,6 @@
 
 
 
-class Movement {
-  public:
-    float directionX;
-    float directionY;
-    float velocity;
-
-    Movement() {
-      directionX = 0;
-      directionY = 0;
-    }
-    Movement(float h, float v) {
-      directionX = h;
-      directionY = v;
-    }
-};
-
-class KeyStates {
-  public:
-    bool left;
-    bool right;
-    bool down;
-    bool up;
-
-    KeyStates() {
-      left = false;
-      right = false;
-      down = false;
-      up = false;
-    }
-
-    void leftPress() {
-      left = true;
-    }
-    void leftRelease() {
-      left = false;
-    }
-    void rightPress() {
-      right = true;
-    }
-    void rightRelease() {
-      right = false;
-    }
-    void downPress() {
-      down = true;
-    }
-    void downRelease() {
-      down = false;
-    }
-    void upPress() {
-      up = true;
-    }
-    void upRelease() {
-      up = false;
-    }
-};
-
-Movement movement;
-KeyStates keyStates;
-
 void framebuffer_size_callback(GLFWwindow*, int width, int height) {
     glViewport(0, 0, width, height);
 }
@@ -85,49 +27,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
 
-    // Handle arrow inputs
-    if (key == GLFW_KEY_LEFT) {
-      if (action == GLFW_PRESS) keyStates.leftPress();
-      if (action == GLFW_RELEASE) keyStates.leftRelease();
-    }
-    if (key == GLFW_KEY_RIGHT) {
-      if (action == GLFW_PRESS) keyStates.rightPress();
-      if (action == GLFW_RELEASE) keyStates.rightRelease();
-    }
-    if (key == GLFW_KEY_DOWN) {
-      if (action == GLFW_PRESS) keyStates.downPress();
-      if (action == GLFW_RELEASE) keyStates.downRelease();
-    }
-    if (key == GLFW_KEY_UP) {
-      if (action == GLFW_PRESS) keyStates.upPress();
-      if (action == GLFW_RELEASE) keyStates.upRelease();
-    }
-    movement.directionX = 0;
-    movement.directionY = 0;
-    // todo: would like to do priority-based movement but seem to have
-    // some weird issues when trying to implement that. Leaving it without
-    // priority logic for now (which means when left and right are pressed together,
-    // they cancel each other out leading to zero movement.)
-    if (keyStates.left) movement.directionX = -1;
-    if (keyStates.right) movement.directionX = 1;
-    if (keyStates.down) movement.directionY = -1;
-    if (keyStates.up) movement.directionY = 1;
-    // if (keyStates.left) movement.directionX -= 1;
-    // if (keyStates.right) movement.directionX += 1;
-    // if (keyStates.down) movement.directionY -= 1;
-    // if (keyStates.up) movement.directionY += 1;
 
-
-
-    // Handle velocity adjustments
-    if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
-      movement.velocity--;
-    }
-    if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
-      movement.velocity++;
-    }
-
-    // Other
 }
 
 
@@ -190,34 +90,61 @@ int main() {
     stbi_image_free(data);
 
 
-    float vertices[] = {
-      // positions         // colors          // tex coords
-      0.5f, 0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 1.0f, // top right
-      0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 1.0f,   1.0f, 0.0f, // bottom right
-      -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, .70f,   0.0f, 0.0f,  // bottom left
-      -0.5f, 0.5f, 0.0f,  0.0f, 0.0f, 0.0f,   0.0f, 1.0f  // top left
-    };
-    unsigned int indices[] = {
-      0, 1, 3,
-      1, 2, 3
-    };
+    float cubeVertices[] = {
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+     0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
 
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+};
 
 
 
     unsigned int vao;
     unsigned int vbo;
-    unsigned int ebo;
     glGenVertexArrays(1, &vao);
     glGenBuffers(1, &vbo);
-    glGenBuffers(1, &ebo);
 
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
 
     unsigned int posLoc, colorLoc, texCoordsLoc;
     posLoc = glGetAttribLocation(shader.programID, "aPos");
@@ -227,54 +154,15 @@ int main() {
     std::cout << "colorLoc= " << colorLoc << std::endl;
     std::cout << "texCoordsLoc= " << texCoordsLoc << std::endl;
 
-WILO: if one of these attributes isn't used, it actually doesn't get a "spot" in the GPU memory.
-        It instead gets a location of invalid handle. Interesting! I'm curious how that works as
-          far as the pipeline for everything. Like the shader code is what decides which attributes are used
-          so what is the pipeline here?
-
-    glVertexAttribPointer(posLoc, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glVertexAttribPointer(colorLoc, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(sizeof(float)*3));
-    glVertexAttribPointer(texCoordsLoc, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(sizeof(float)*5));
+    glVertexAttribPointer(posLoc, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    // glVertexAttribPointer(colorLoc, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(sizeof(float)*3));
+    // glVertexAttribPointer(texCoordsLoc, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(sizeof(float)*5));
 
     glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    glEnableVertexAttribArray(2);
+    // glEnableVertexAttribArray(1);
+    // glEnableVertexAttribArray(2);
 
 
-    float h = 0.095f;
-    float w = 0.033;
-    float speedIndicatorBarVertices[] = {
-      0.0f, 0.0f, 0.0f, // bottom left
-      w, 0.0f, 0.0f, // bottom right
-      0.0f, h, 0.0f, // top left
-
-      w, 0.0f, 0.0f, // bottom right
-      w, h, 0.0f, // top left
-      0.0f, h, 0.0f, // top right
-    };
-
-    unsigned int speedVBO;
-    unsigned int speedVAO;
-    glGenVertexArrays(1, &speedVAO);
-    glGenBuffers(1, &speedVBO);
-
-    glBindVertexArray(speedVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, speedVBO);
-
-    glBufferData(GL_ARRAY_BUFFER, sizeof(speedIndicatorBarVertices), speedIndicatorBarVertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    Shader speedShader("src/shaders/speed.vert", "src/shaders/speed.frag");
-
-
-    float velocity = 0.1f;
-    float previousTimeValue;
-    float timeValue = 0;
-    float deltaTime;
-
-    float offsetX = 0.0f;
-    float offsetY = 0.0f;
 
 
     // glm::mat4 trans = glm::mat4(1.0f);
@@ -286,47 +174,49 @@ WILO: if one of these attributes isn't used, it actually doesn't get a "spot" in
     // trans = glm::rotate(trans, glm::radians(90.0f), glm::vec3(0.0, 0.0, 1.0));
     // trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
 
+    glm::mat4 model = glm::mat4(1.0f);
 
+    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+    glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 cameraDirection = glm::normalize(cameraPos - cameraTarget);
+    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
+    glm::vec3 cameraUp = glm::cross(cameraDirection, cameraRight);
+
+    glm::mat4 view;
+    view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
+
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 0.1f, 100.0f);
+
+    shader.use();
+    unsigned int modelLoc, viewLoc, projectionLoc;
+    modelLoc = glGetUniformLocation(shader.programID, "model");
+    viewLoc = glGetUniformLocation(shader.programID, "view");
+    projectionLoc = glGetUniformLocation(shader.programID, "projection");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
 
     unsigned int transformLoc = glGetUniformLocation(shader.programID, "transform");
-
+WILO: got cube spinning; add more cubes, add edges/texteus, etc. The animation is really slow on DellDesktop for some reason.
+TODO: edit makefile so I can have a consistent makefile across PCs, with some conditions or whatever so it'll work regardless
 
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         
 
-        previousTimeValue = timeValue;
-        timeValue = glfwGetTime();
-        deltaTime = timeValue - previousTimeValue;
-        offsetX += movement.velocity * movement.directionX * deltaTime;
-        offsetY += movement.velocity * movement.directionY * deltaTime;
-
 
         shader.use();
-        shader.setFloat("uOffsetX", offsetX);
-        shader.setFloat("uOffsetY", offsetY);
+        model = glm::rotate(model, (float)glfwGetTime() * glm::radians(0.1f), glm::vec3(0.5f, 1.0f, 0.0f));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-        glm::mat4 trans = glm::mat4(1.0f);
-        trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
-        trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
 
-        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
-
-        glBindTexture(GL_TEXTURE_2D, texture);
+        // glBindTexture(GL_TEXTURE_2D, texture);
         glBindVertexArray(vao);
 
-        // glDrawArrays(GL_TRIANGLES, 0, 3);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-        /* DRAW SPEED INDICATORS (not really speed indicators at the moment; will
-         * need to learn instancing for that) */
-
-        speedShader.use();
-        glBindVertexArray(speedVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
