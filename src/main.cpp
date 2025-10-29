@@ -11,74 +11,59 @@
 #include <sstream>
 #include <math.h>
 #include "shader.hpp"
+#include <vector>
+
+int CUBE_INDEX_MAX = 3;
+int CUBE_INDEX = 0;
 
 
 
+void parseCubePositions(std::vector<glm::vec3> &cubePositions) {
+  std::ifstream file("cubePositions.txt");
+  std::string line;
+  while (std::getline(file, line)) {
+    std::istringstream in(line);
 
+    float x, y, z;
+    in >> x >> y >> z;
+    glm::vec3 positions = glm::vec3(x, y, z);
+    cubePositions.push_back(positions);
+  }
+}
 
-class Movement {
-  public:
-    float directionX;
-    float directionY;
-    float velocity;
+unsigned int makeTexture(std::string filepath) {
+  unsigned int texID;
+  glGenTextures(1, &texID);
+  glBindTexture(GL_TEXTURE_2D, texID);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    Movement() {
-      directionX = 0;
-      directionY = 0;
-    }
-    Movement(float h, float v) {
-      directionX = h;
-      directionY = v;
-    }
-};
+  int width, height, channels;
+  unsigned char *data = stbi_load(filepath.c_str(), &width, &height, &channels, 0);
 
-class KeyStates {
-  public:
-    bool left;
-    bool right;
-    bool down;
-    bool up;
+  if (data) {
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+  }
+  else {
+    std::cout << "Failed to load texture" << std::endl;
+  }
+  stbi_image_free(data);
 
-    KeyStates() {
-      left = false;
-      right = false;
-      down = false;
-      up = false;
-    }
+  glBindTexture(GL_TEXTURE_2D, 0);
 
-    void leftPress() {
-      left = true;
-    }
-    void leftRelease() {
-      left = false;
-    }
-    void rightPress() {
-      right = true;
-    }
-    void rightRelease() {
-      right = false;
-    }
-    void downPress() {
-      down = true;
-    }
-    void downRelease() {
-      down = false;
-    }
-    void upPress() {
-      up = true;
-    }
-    void upRelease() {
-      up = false;
-    }
-};
+  return texID;
 
-Movement movement;
-KeyStates keyStates;
+}
+
 
 void framebuffer_size_callback(GLFWwindow*, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
+bool pause = false;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_Q && action == GLFW_PRESS) {
         std::cout << "q pressed" << std::endl;
@@ -86,48 +71,24 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     }
 
     // Handle arrow inputs
-    if (key == GLFW_KEY_LEFT) {
-      if (action == GLFW_PRESS) keyStates.leftPress();
-      if (action == GLFW_RELEASE) keyStates.leftRelease();
+    if (key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
+      CUBE_INDEX--;
     }
-    if (key == GLFW_KEY_RIGHT) {
-      if (action == GLFW_PRESS) keyStates.rightPress();
-      if (action == GLFW_RELEASE) keyStates.rightRelease();
+    if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
+      CUBE_INDEX++;
     }
     if (key == GLFW_KEY_DOWN) {
-      if (action == GLFW_PRESS) keyStates.downPress();
-      if (action == GLFW_RELEASE) keyStates.downRelease();
     }
     if (key == GLFW_KEY_UP) {
-      if (action == GLFW_PRESS) keyStates.upPress();
-      if (action == GLFW_RELEASE) keyStates.upRelease();
     }
-    movement.directionX = 0;
-    movement.directionY = 0;
-    // todo: would like to do priority-based movement but seem to have
-    // some weird issues when trying to implement that. Leaving it without
-    // priority logic for now (which means when left and right are pressed together,
-    // they cancel each other out leading to zero movement.)
-    if (keyStates.left) movement.directionX = -1;
-    if (keyStates.right) movement.directionX = 1;
-    if (keyStates.down) movement.directionY = -1;
-    if (keyStates.up) movement.directionY = 1;
-    // if (keyStates.left) movement.directionX -= 1;
-    // if (keyStates.right) movement.directionX += 1;
-    // if (keyStates.down) movement.directionY -= 1;
-    // if (keyStates.up) movement.directionY += 1;
-
-
-
-    // Handle velocity adjustments
-    if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
-      movement.velocity--;
-    }
-    if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
-      movement.velocity++;
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+      pause = !pause;
     }
 
-    // Other
+    if (CUBE_INDEX < 0) CUBE_INDEX = CUBE_INDEX_MAX;
+    if (CUBE_INDEX > CUBE_INDEX_MAX) CUBE_INDEX = 0;
+
+
 }
 
 
@@ -167,27 +128,10 @@ int main() {
 
     Shader shader("src/shaders/shader.vert", "src/shaders/shader.frag");
 
-    /* TEXTURE STUFF */
-
-    unsigned int texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    int texImageWidth, texImageHeight, numOfChannels;
-    unsigned char *data = stbi_load("resources/crate.jpg", &texImageWidth, &texImageHeight, &numOfChannels, 0);
-    
-    if (data) {
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texImageWidth, texImageHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-      glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else {
-      std::cout << "Failed to load texture" << std::endl;
-    }
-    stbi_image_free(data);
+    unsigned int tex1 = makeTexture("resources/one.jpg");
+    unsigned int tex2 = makeTexture("resources/two.jpg");
+    unsigned int tex3 = makeTexture("resources/three.jpg");
+    unsigned int tex4 = makeTexture("resources/four.jpg");
 
 
     // float vertices[] = {
@@ -214,7 +158,6 @@ int main() {
         //  0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
         // -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
         // -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        //
         // -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
         // -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
         // -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
@@ -243,48 +186,51 @@ int main() {
         // -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
         // -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
 
-        -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-        -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
+
+        // Position           // Texture
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
 
         // Top
-        -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
 
-        -0.5f,  0.5f,  0.5f, 1.0f, 0.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f, 1.0f, 0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f, 1.0f, 0.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f, 1.0f, 0.0f, 1.0f,
+        // Back
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
 
-         0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
 
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
 
-        -0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
     };
 
     unsigned int vao, vbo;
@@ -297,75 +243,150 @@ int main() {
 
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    unsigned int posLoc, texCoordsLoc, colorLoc;
+    unsigned int posLoc, texCoordLoc, colorLoc;
     posLoc = glGetAttribLocation(shader.programID, "aPos");
-    // texCoordsLoc = glGetAttribLocation(shader.programID, "aTexCoords");
-    colorLoc = glGetAttribLocation(shader.programID, "aColor");
+    texCoordLoc = glGetAttribLocation(shader.programID, "aTexCoord");
 
-    glVertexAttribPointer(posLoc, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    // glVertexAttribPointer(texCoordsLoc, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(sizeof(float)*5));
-    glVertexAttribPointer(colorLoc, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)(sizeof(float)*3));
+    glVertexAttribPointer(posLoc, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)0);
+    glVertexAttribPointer(texCoordLoc, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(sizeof(float)*3));
 
     glEnableVertexAttribArray(posLoc);
-    // glEnableVertexAttribArray(texCoordsLoc);
-    glEnableVertexAttribArray(colorLoc);
+    glEnableVertexAttribArray(texCoordLoc);
 
 
-    // glm::mat4 trans = glm::mat4(1.0f);
-    // trans = glm::translate(trans, glm::vec3(1.0f, 1.0f, 0.0f));
-    // glm::vec4 vec(1.0f, 0.0f, 0.0f, 1.0f);
-    // vec = trans * vec;
-    // std::cout << vec.x << vec.y << vec.z << vec.w << std::endl;
-    // glm::mat4 trans = glm::mat4(1.0f);
-    // trans = glm::rotate(trans, glm::radians(90.0f), glm::vec3(0.0, 0.0, 1.0));
-    // trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5));
+    // glm::mat4 model = glm::mat4(1.0f);
 
-    glm::mat4 model = glm::mat4(1.0f);
-
-    glm::mat4 view = glm::mat4(1.0f);
-    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+    // glm::mat4 view = glm::mat4(1.0f);
+    // view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 
     glm::mat4 projection;
     projection = glm::perspective(glm::radians(45.0f), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
 
 
+    // glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+    // glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+    // glm::vec3 cameraDirection = glm::normalize(cameraPos - cameraTarget);
+    // glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+    // glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
+    // glm::vec3 cameraUp = glm::cross(cameraDirection, cameraRight);
+    //
+    // glm::mat4 view;
+    // view = glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f),
+    //                    glm::vec3(0.0f, 0.0f, 0.0f),
+    //                    glm::vec3(0.0f, 1.0f, 0.0f));
 
+    std::vector<glm::vec3> cubePositions = {
+      glm::vec3(0.0f, 0.0f, 0.0f),
+      glm::vec3(2.0f, 5.0f, -15.0f),
+      glm::vec3(-1.5f, -2.2f, -2.5f),
+      glm::vec3(-3.8f, -2.0f, -12.3f)
+    };
 
+    std::vector<unsigned int> textures = {
+      tex1,
+      tex2,
+      tex3,
+      tex4
+    };
+
+  
 
     glEnable(GL_DEPTH_TEST);
-
-
     while (!glfwWindowShouldClose(window)) {
+      // todo: how to get pausing functionality to work?
+      // Some issues: 1. this current commented out code causes
+      // a weird shaking effect when paused and 2. the rotating
+      // is still "happening" when paused so when we unpause, it jumps
+      // to a different scene since things were still moving while 
+      // visually it was frozen.
+      // if (pause) {
+      //   glfwPollEvents();
+      //   glfwSwapBuffers(window);
+      //   continue;
+      // }
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         shader.use();
 
-        int modelLoc = glGetUniformLocation(shader.programID, "model");
-        model = glm::rotate(model, glm::radians(2.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-        model = glm::rotate(model, glm::radians(1.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        glBindVertexArray(vao);
+
+
+        /* ==========================
+         *      VIEW MATRIX 
+         * ========================== */
+        const float radius = 10.0f;
+        float camX = sin(glfwGetTime()) * radius;
+        float camZ = cos(glfwGetTime()) * radius;
+        glm::mat4 view;
+        glm::vec3 cameraPos = glm::vec3(camX, 0.0, camZ);
+// WILO: why does rotation look so different if I'm focusing on different cube?
+//         and why isn't my arrow key input not working to rotate between cubes? 
+//         is my key input logic even getting used? I assume not
+        // WILO^^ this was my previous WILO, and the solution seems to be to
+        //   use jpgs instead of pngs. So next step is to investigate why this
+        //   is the case.
+        //   Also, look into how to make the images face the right direction because
+        //   right now each face of the cube has the texture facing a different
+        //   direction, and none of them seem right.
+        //   And also, convert the other numbers and write the logic to place
+        //   different numbers on different cubes based on the cube's index
+        glm::vec3 target = cubePositions[CUBE_INDEX];
+        view = glm::lookAt(cameraPos, target, glm::vec3(0.0, 1.0, 0.0));
 
         int viewLoc = glGetUniformLocation(shader.programID, "view");
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 
+        /* ==========================
+         *      PROJECTION MATRIX 
+         * ========================== */
         int projectionLoc = glGetUniformLocation(shader.programID, "projection");
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-        
 
-        // glm::mat4 trans = glm::mat4(1.0f);
-        // trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
-        // trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
-        //
-        // glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+        /* ==========================
+         *      MODEL MATRIX 
+         * ========================== */
+        int modelLoc = glGetUniformLocation(shader.programID, "model");
+        int cubeColorLoc = glGetUniformLocation(shader.programID, "cubeColor");
+        // std::vector<glm::vec3> cubeColors = {
+        //   glm::vec3(1.0f, 0.0f, 0.0f),
+        //   glm::vec3(0.0f, 1.0f, 0.0f),
+        //   glm::vec3(0.0f, 0.0f, 1.0f),
+        //   glm::vec3(1.0f, 1.0f, 1.0f)
+        // };
+        float cubeColors[] = {
+          1.0f, 0.0f, 0.0f,
+          0.0f, 1.0f, 0.0f,
+          0.0f, 0.0f, 1.0f,
+          0.0f, 1.0f, 1.0f,
+        };
 
-        // glBindTexture(GL_TEXTURE_2D, texture);
+// WILO: how to get black edges on cubes?
+//         apply textures that have numbers (hell even make the textures yourself
+//             in paint!)
+//         then dig back into why the rotation logic is so different for each cube?
+//         also see if you can use a vector of glm::vec3s for cubeColors instead of
+//         a raw array of floats. Is there any reason, best practice, etc. for one
+//         way vs the other?
 
-        glBindVertexArray(vao);
+        for (unsigned int i=0; i<cubePositions.size(); i++) {
+          glm::mat4 model = glm::mat4(1.0f);
+          model = glm::translate(model, cubePositions[i]);
+          float angle = 1.0f * i;
+          model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+          glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+          
+          glUniform3fv(cubeColorLoc, 1, cubeColors+(i*3));
 
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+          if (i < textures.size()) {
+            glBindTexture(GL_TEXTURE_2D, textures[i]);
+          }
+          else {
+            glBindTexture(GL_TEXTURE_2D, 0);
+          }
 
-
+          glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -375,3 +396,7 @@ int main() {
     glfwTerminate();
     return 0;
 }
+
+WILO 10/28: got multiple textures. Still need to look into two issues:
+1. whyu are they facing every way but the correct orientation?
+2. why do jpgs work but not pngs? an STB quirk?
