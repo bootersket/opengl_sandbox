@@ -312,6 +312,16 @@ int main() {
         glBindVertexArray(vao);
 
 
+
+        int modelLoc = glGetUniformLocation(shader.programID, "model");
+        int cubeColorLoc = glGetUniformLocation(shader.programID, "cubeColor");
+        float cubeColors[] = {
+          1.0f, 0.0f, 0.0f,
+          0.0f, 1.0f, 0.0f,
+          0.0f, 0.0f, 1.0f,
+          0.0f, 1.0f, 1.0f,
+        };
+
         /* ==========================
          *      VIEW MATRIX 
          * ========================== */
@@ -319,18 +329,9 @@ int main() {
         float camX = sin(glfwGetTime()) * radius;
         float camZ = cos(glfwGetTime()) * radius;
         glm::mat4 view;
-        glm::vec3 cameraPos = glm::vec3(camX, 0.0, camZ);
-// WILO: why does rotation look so different if I'm focusing on different cube?
-//         and why isn't my arrow key input not working to rotate between cubes? 
-//         is my key input logic even getting used? I assume not
-        // WILO^^ this was my previous WILO, and the solution seems to be to
-        //   use jpgs instead of pngs. So next step is to investigate why this
-        //   is the case.
-        //   Also, look into how to make the images face the right direction because
-        //   right now each face of the cube has the texture facing a different
-        //   direction, and none of them seem right.
-        //   And also, convert the other numbers and write the logic to place
-        //   different numbers on different cubes based on the cube's index
+        // glm::vec3 cameraPos = glm::vec3(camX, 0.0, camZ);
+WILO: why does the rotation work so wonky depending on the cube of focus??
+        glm::vec3 cameraPos = glm::vec3(0.0f, 0.0, 30.0f);
         glm::vec3 target = cubePositions[CUBE_INDEX];
         view = glm::lookAt(cameraPos, target, glm::vec3(0.0, 1.0, 0.0));
 
@@ -343,24 +344,6 @@ int main() {
         int projectionLoc = glGetUniformLocation(shader.programID, "projection");
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-        /* ==========================
-         *      MODEL MATRIX 
-         * ========================== */
-        int modelLoc = glGetUniformLocation(shader.programID, "model");
-        int cubeColorLoc = glGetUniformLocation(shader.programID, "cubeColor");
-        // std::vector<glm::vec3> cubeColors = {
-        //   glm::vec3(1.0f, 0.0f, 0.0f),
-        //   glm::vec3(0.0f, 1.0f, 0.0f),
-        //   glm::vec3(0.0f, 0.0f, 1.0f),
-        //   glm::vec3(1.0f, 1.0f, 1.0f)
-        // };
-        float cubeColors[] = {
-          1.0f, 0.0f, 0.0f,
-          0.0f, 1.0f, 0.0f,
-          0.0f, 0.0f, 1.0f,
-          0.0f, 1.0f, 1.0f,
-        };
-
 // WILO: how to get black edges on cubes?
 //         apply textures that have numbers (hell even make the textures yourself
 //             in paint!)
@@ -369,10 +352,13 @@ int main() {
 //         a raw array of floats. Is there any reason, best practice, etc. for one
 //         way vs the other?
 
+        /* ==========================
+         *      MODEL MATRIX 
+         * ========================== */
         for (unsigned int i=0; i<cubePositions.size(); i++) {
           glm::mat4 model = glm::mat4(1.0f);
           model = glm::translate(model, cubePositions[i]);
-          float angle = 1.0f * i;
+          float angle = 10.0f * i;
           model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
           glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
           
@@ -396,7 +382,3 @@ int main() {
     glfwTerminate();
     return 0;
 }
-
-WILO 10/28: got multiple textures. Still need to look into two issues:
-1. whyu are they facing every way but the correct orientation?
-2. why do jpgs work but not pngs? an STB quirk?
