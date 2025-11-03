@@ -261,6 +261,9 @@ int main() {
 
     glm::mat4 projection;
     projection = glm::perspective(glm::radians(45.0f), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
+    // left right bottom top near far
+    // todo how to get ortho to work? are my values eg. near & far wrong? or is something else amiss?
+    // projection = glm::ortho(0.0f, (float)WINDOW_WIDTH, 0.0f, (float)WINDOW_HEIGHT, 0.1f, 100.0f);
 
 
     // glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
@@ -326,12 +329,18 @@ int main() {
          *      VIEW MATRIX 
          * ========================== */
         const float radius = 10.0f;
-        float camX = sin(glfwGetTime()) * radius;
-        float camZ = cos(glfwGetTime()) * radius;
+
+        float camX, camZ;
+        camX = sin(glfwGetTime()) * radius;
+        // camX = 0.0f;
+        camZ = cos(glfwGetTime()) * radius;
+        // camZ = 10.0f;
+
+        std::cout << "camX: " << camX << std::endl;
+        std::cout << "camZ: " << camZ << std::endl;
+        std::cout << std::endl;
         glm::mat4 view;
-        // glm::vec3 cameraPos = glm::vec3(camX, 0.0, camZ);
-WILO: why does the rotation work so wonky depending on the cube of focus??
-        glm::vec3 cameraPos = glm::vec3(0.0f, 0.0, 30.0f);
+        glm::vec3 cameraPos = glm::vec3(camX, 0.0, camZ);
         glm::vec3 target = cubePositions[CUBE_INDEX];
         view = glm::lookAt(cameraPos, target, glm::vec3(0.0, 1.0, 0.0));
 
@@ -352,6 +361,9 @@ WILO: why does the rotation work so wonky depending on the cube of focus??
 //         a raw array of floats. Is there any reason, best practice, etc. for one
 //         way vs the other?
 
+        still haven't totally figured out why the rotation is so different if focusing on different cubes,
+              but I got closer. Also want to tinker with making the camera still and having the cubes move around in
+                different "orbits"
         /* ==========================
          *      MODEL MATRIX 
          * ========================== */
