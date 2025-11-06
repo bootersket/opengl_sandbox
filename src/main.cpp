@@ -32,6 +32,11 @@ void parseCubePositions(std::vector<glm::vec3> &cubePositions) {
 }
 
 unsigned int makeTexture(std::string filepath) {
+  GLint FORMAT = GL_RGB;
+
+  /*=====================================
+  Texture setup
+  ======================================*/
   unsigned int texID;
   glGenTextures(1, &texID);
   glBindTexture(GL_TEXTURE_2D, texID);
@@ -40,22 +45,32 @@ unsigned int makeTexture(std::string filepath) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+
+  /*=====================================
+  Load image data
+  ======================================*/
   int width, height, channels;
   unsigned char *data = stbi_load(filepath.c_str(), &width, &height, &channels, 0);
 
+  /*=====================================
+  Check that data was read successfully
+  ======================================*/
   if (data) {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, FORMAT, width, height, 0, FORMAT, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
   }
   else {
     std::cout << "Failed to load texture" << std::endl;
   }
-  stbi_image_free(data);
 
+  /*=====================================
+  Tear down
+  ======================================*/
+  stbi_image_free(data);
   glBindTexture(GL_TEXTURE_2D, 0);
 
-  return texID;
 
+  return texID;
 }
 
 
@@ -63,7 +78,12 @@ void framebuffer_size_callback(GLFWwindow*, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
-bool pause = false;
+float camX = 0.0f;
+float camZ = 10.0f;
+float CAM_MAX = 10.0f;
+float CAM_TICK = 0.1f;
+
+#define KEYPRESSED(goalKey) ( key == goalKey && action == GLFW_PRESS )
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_Q && action == GLFW_PRESS) {
         std::cout << "q pressed" << std::endl;
@@ -71,22 +91,47 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     }
 
     // Handle arrow inputs
-    if (key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
+    // if (key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
+    if (KEYPRESSED(GLFW_KEY_LEFT)) {
       CUBE_INDEX--;
     }
-    if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS) {
+    if (KEYPRESSED(GLFW_KEY_RIGHT)) {
       CUBE_INDEX++;
     }
-    if (key == GLFW_KEY_DOWN) {
-    }
-    if (key == GLFW_KEY_UP) {
-    }
-    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
-      pause = !pause;
-    }
-
     if (CUBE_INDEX < 0) CUBE_INDEX = CUBE_INDEX_MAX;
     if (CUBE_INDEX > CUBE_INDEX_MAX) CUBE_INDEX = 0;
+    // if (KEYPRESSED(GLFW_KEY_A)) {
+    //   if (camX < 0 && camX <= CAM_MAX) {
+    //     camX = 0.0f;
+    //     camZ = -CAM_INCREMENT;
+    //   }
+    //   else if (camZ < 0) {
+    //     camX = CAM_INCREMENT;
+    //     camZ = 0.0f;
+    //   }
+    //   else if (camX > 0) {
+    //     camX = 0.0f;
+    //     camZ = CAM_INCREMENT;
+    //   }
+    //   else {
+    //     camX = -CAM_INCREMENT;
+    //     camZ = 0;
+    //   }
+    // }
+    if (key == GLFW_KEY_D && action == GLFW_REPEAT) {
+      if (camX >= CAM_MAX) return;
+      camX += CAM_TICK;
+      camZ = -camX + CAM_MAX;
+    }
+    if (key == GLFW_KEY_A && action == GLFW_REPEAT) {
+      if (camX <= -CAM_MAX) return;
+      camX -= CAM_TICK;
+      camZ = -camX + CAM_MAX;
+    }
+
+
+
+
 
 
 }
@@ -105,6 +150,8 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+
     GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Hello OpenGL", nullptr, nullptr);
     if (!window) {
         std::cerr << "Failed to create window\n";
@@ -112,6 +159,8 @@ int main() {
 	
         return -1;
     }
+    glfwSetWindowPos(window, 2000, 100);
+    glfwShowWindow(window);
 
     glfwMakeContextCurrent(window);
 
@@ -128,6 +177,7 @@ int main() {
 
     Shader shader("src/shaders/shader.vert", "src/shaders/shader.frag");
 
+    stbi_set_flip_vertically_on_load(true);
     unsigned int tex1 = makeTexture("resources/one.jpg");
     unsigned int tex2 = makeTexture("resources/two.jpg");
     unsigned int tex3 = makeTexture("resources/three.jpg");
@@ -145,48 +195,6 @@ int main() {
 
 
     float vertices[] = {
-        // -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-        //  0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-        //  0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        //  0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        // -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-        // -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-        //
-        // -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        //  0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-        //  0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-        //  0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-        // -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-        // -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        // -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        // -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        // -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        // -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        // -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        // -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        //
-        //  0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        //  0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        //  0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        //  0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        //  0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        //  0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        //
-        // -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        //  0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-        //  0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-        //  0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-        // -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        // -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        //
-        // -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-        //  0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        //  0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        //  0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        // -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-        // -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
-
-
         // Position           // Texture
         -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
          0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
@@ -296,17 +304,6 @@ int main() {
 
     glEnable(GL_DEPTH_TEST);
     while (!glfwWindowShouldClose(window)) {
-      // todo: how to get pausing functionality to work?
-      // Some issues: 1. this current commented out code causes
-      // a weird shaking effect when paused and 2. the rotating
-      // is still "happening" when paused so when we unpause, it jumps
-      // to a different scene since things were still moving while 
-      // visually it was frozen.
-      // if (pause) {
-      //   glfwPollEvents();
-      //   glfwSwapBuffers(window);
-      //   continue;
-      // }
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -330,15 +327,15 @@ int main() {
          * ========================== */
         const float radius = 10.0f;
 
-        float camX, camZ;
-        camX = sin(glfwGetTime()) * radius;
-        // camX = 0.0f;
-        camZ = cos(glfwGetTime()) * radius;
-        // camZ = 10.0f;
-
-        std::cout << "camX: " << camX << std::endl;
-        std::cout << "camZ: " << camZ << std::endl;
-        std::cout << std::endl;
+        // float camX, camZ;
+        // camX = sin(glfwGetTime()) * radius;
+        // camX = 10.0f;
+        // camZ = cos(glfwGetTime()) * radius;
+        // camZ = 00.0f;
+        //
+        // std::cout << "camX: " << camX << std::endl;
+        // std::cout << "camZ: " << camZ << std::endl;
+        // std::cout << std::endl;
         glm::mat4 view;
         glm::vec3 cameraPos = glm::vec3(camX, 0.0, camZ);
         glm::vec3 target = cubePositions[CUBE_INDEX];
@@ -354,16 +351,11 @@ int main() {
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
 // WILO: how to get black edges on cubes?
-//         apply textures that have numbers (hell even make the textures yourself
-//             in paint!)
 //         then dig back into why the rotation logic is so different for each cube?
 //         also see if you can use a vector of glm::vec3s for cubeColors instead of
 //         a raw array of floats. Is there any reason, best practice, etc. for one
 //         way vs the other?
 
-        still haven't totally figured out why the rotation is so different if focusing on different cubes,
-              but I got closer. Also want to tinker with making the camera still and having the cubes move around in
-                different "orbits"
         /* ==========================
          *      MODEL MATRIX 
          * ========================== */
@@ -371,7 +363,7 @@ int main() {
           glm::mat4 model = glm::mat4(1.0f);
           model = glm::translate(model, cubePositions[i]);
           float angle = 10.0f * i;
-          model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+          // model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
           glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
           
           glUniform3fv(cubeColorLoc, 1, cubeColors+(i*3));
@@ -394,3 +386,5 @@ int main() {
     glfwTerminate();
     return 0;
 }
+
+

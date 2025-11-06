@@ -1,0 +1,5 @@
+Questions to answer:
+
+* Why does using jpg work but not png?
+* why are the textures at random orientations? how do I make them the correct orientation?
+* How to open window when running program in a specific area of the display?
