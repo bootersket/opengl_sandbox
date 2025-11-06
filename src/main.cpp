@@ -126,7 +126,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if (key == GLFW_KEY_A && action == GLFW_REPEAT) {
       if (camX <= -CAM_MAX) return;
       camX -= CAM_TICK;
-      camZ = -camX + CAM_MAX;
+      camZ = camX + CAM_MAX;
     }
 
 
