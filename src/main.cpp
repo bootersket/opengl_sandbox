@@ -16,6 +16,72 @@
 int CUBE_INDEX_MAX = 3;
 int CUBE_INDEX = 0;
 
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+const glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+const glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+float deltaTime = 0.0f;
+float lastUpdateTime = 0.0f; // number of seconds since last loop
+float lastFrameTime = 0.0f; // number of seconds since last frame
+
+std::vector<glm::vec2> makeCircleVertices() {
+  std::vector<glm::vec2> vertices;
+  int segments = 64;
+  float r = 1.0f;
+
+  for (int i=0; i<segments; i++) {
+    float t = 2.0f * M_PI * (float)i / segments;
+    float x = r * cos(t);
+    float y = r * sin(t);
+    vertices.emplace_back(x, y);
+  }
+  return vertices;
+}
+
+void printVec3(glm::vec3 v) {
+  std::cout << v.x << ", " << v.y << ", " << v.z << std::endl;
+}
+
+double yaw = -90.0f;
+glm::vec3 direction = glm::vec3(0.0f, 0.0f, -1.0f);
+void processInput(GLFWwindow* window) {
+  const float cameraSpeed = 10 * deltaTime;
+
+  if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+    // cameraPos += cameraSpeed * cameraFront;
+    cameraPos += cameraSpeed * direction;
+  }
+  if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+    // cameraPos -= cameraSpeed * cameraFront;
+    cameraPos -= cameraSpeed * direction;
+  }
+  if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+    // cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    cameraPos -= glm::normalize(glm::cross(direction, cameraUp)) * cameraSpeed;
+  }
+  if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+    // cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    cameraPos += glm::normalize(glm::cross(direction, cameraUp)) * cameraSpeed;
+  }
+  if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+    cameraPos -= cameraSpeed * cameraUp;
+  }
+  if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+    cameraPos += cameraSpeed * cameraUp;
+  }
+
+  if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
+    yaw -= 0.001;
+  }
+  if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
+    yaw += 0.001;
+  }
+  if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
+    std::cout << "yaw = " << yaw << std::endl;
+    printVec3(direction);
+  }
+
+}
 
 
 void parseCubePositions(std::vector<glm::vec3> &cubePositions) {
@@ -76,6 +142,17 @@ unsigned int makeTexture(std::string filepath) {
 
 void framebuffer_size_callback(GLFWwindow*, int width, int height) {
     glViewport(0, 0, width, height);
+}
+
+float curCamAngle = 0.0f;
+double lastXPos;
+void mouse_callback(GLFWwindow* window, double xPos, double yPos) {
+  if (xPos == 0.0f) return;
+  double xPosDelta = lastXPos - xPos;
+  // std::cout << "xPosDelta: " << xPosDelta << std::endl;
+  
+  lastXPos = xPos;
+
 }
 
 float camX = 0.0f;
@@ -173,6 +250,7 @@ int main() {
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     
     glfwSetKeyCallback(window, key_callback);
+    glfwSetCursorPosCallback(window, mouse_callback);
 
 
     Shader shader("src/shaders/shader.vert", "src/shaders/shader.frag");
@@ -274,17 +352,6 @@ int main() {
     // projection = glm::ortho(0.0f, (float)WINDOW_WIDTH, 0.0f, (float)WINDOW_HEIGHT, 0.1f, 100.0f);
 
 
-    // glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-    // glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-    // glm::vec3 cameraDirection = glm::normalize(cameraPos - cameraTarget);
-    // glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-    // glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
-    // glm::vec3 cameraUp = glm::cross(cameraDirection, cameraRight);
-    //
-    // glm::mat4 view;
-    // view = glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f),
-    //                    glm::vec3(0.0f, 0.0f, 0.0f),
-    //                    glm::vec3(0.0f, 1.0f, 0.0f));
 
     std::vector<glm::vec3> cubePositions = {
       glm::vec3(0.0f, 0.0f, 0.0f),
@@ -300,10 +367,55 @@ int main() {
       tex4
     };
 
-  
 
+    float fps = 60.0f;
+    float secPerFrame = 1.0f/fps;
+
+
+
+
+    /* ==========================
+     *    CIRCLE MINIMAP SETUP
+     * ========================== */
+    Shader circleShader("src/shaders/circle.vert", "src/shaders/circle.frag");
+
+    unsigned int circleVAO, circleVBO;
+    glGenVertexArrays(1, &circleVAO);
+    glGenBuffers(1, &circleVBO);
+
+    glBindVertexArray(circleVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, circleVBO);
+
+    std::vector<glm::vec2> circleVertices = makeCircleVertices();
+    glBufferData(GL_ARRAY_BUFFER, circleVertices.size() * sizeof(glm::vec2), circleVertices.data(), GL_STATIC_DRAW);
+
+
+    posLoc = glGetAttribLocation(circleShader.programID, "aPos");
+    glVertexAttribPointer(posLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+    glEnableVertexAttribArray(posLoc);
+
+
+
+
+
+    /* ==========================
+     *      RENDER LOOP
+     * ========================== */
     glEnable(GL_DEPTH_TEST);
     while (!glfwWindowShouldClose(window)) {
+
+      float now = glfwGetTime();
+      deltaTime = now - lastUpdateTime;
+      glfwPollEvents();
+
+
+      if ((now - lastFrameTime) >= secPerFrame) {
+        glfwSwapBuffers(window);
+        lastFrameTime = now;
+      }
+      lastUpdateTime = now;
+
+
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -325,21 +437,11 @@ int main() {
         /* ==========================
          *      VIEW MATRIX 
          * ========================== */
-        const float radius = 10.0f;
-
-        // float camX, camZ;
-        // camX = sin(glfwGetTime()) * radius;
-        // camX = 10.0f;
-        // camZ = cos(glfwGetTime()) * radius;
-        // camZ = 00.0f;
-        //
-        // std::cout << "camX: " << camX << std::endl;
-        // std::cout << "camZ: " << camZ << std::endl;
-        // std::cout << std::endl;
         glm::mat4 view;
-        glm::vec3 cameraPos = glm::vec3(camX, 0.0, camZ);
-        glm::vec3 target = cubePositions[CUBE_INDEX];
-        view = glm::lookAt(cameraPos, target, glm::vec3(0.0, 1.0, 0.0));
+        direction.x = cos(glm::radians(yaw));
+        direction.z = sin(glm::radians(yaw));
+        // view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        view = glm::lookAt(cameraPos, cameraPos + direction, cameraUp);
 
         int viewLoc = glGetUniformLocation(shader.programID, "view");
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
@@ -364,6 +466,7 @@ int main() {
           model = glm::translate(model, cubePositions[i]);
           float angle = 10.0f * i;
           // model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+          modelLoc = glGetUniformLocation(circleShader.programID, "model");
           glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
           
           glUniform3fv(cubeColorLoc, 1, cubeColors+(i*3));
@@ -378,13 +481,54 @@ int main() {
           glDrawArrays(GL_TRIANGLES, 0, 36);
         }
 
-        glfwSwapBuffers(window);
-        glfwPollEvents();
+
+        /* ==========================
+         *     DRAW CIRCLE MINIMAP
+         * ========================== */
+        circleShader.use();
+        glBindVertexArray(circleVAO);
+        int circleSegments = 64;
+        glDrawArrays(GL_LINE_LOOP, 0, circleSegments); // ques: what is GL_LINE_LOOP?
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::scale(model, glm::vec3(0.5, 0.5, 0.5));
+        modelLoc = glGetUniformLocation(circleShader.programID, "model");
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+
+
+        processInput(window);
     }
 
     glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
 }
+
+
+/*
+Current task:
+- make circle not take up entire screen--model matrix?
+^^^ got this to work! Now continue tinkering with it.
+
+
+Next steps:
+- Add in MVP matrix stuff so I can make the circle smaller
+- implement the other "piece" of the mini map to indicate 
+  what the current angle is (a line? a dot? idk)
+- How to change thickness of circle outline?
+
+Questions:
+- What is GL_LINE_LOOP? What is the first arg to glDrawArrays() in general?
+- Wonder if I can just do model * pos in vert shader? Or do I need empty/basic view and projection matrices?
+
+Problems:
+
+Solved:
+- why is it not green? --> using the wrong shader
+- how do I make it stay in place (like a ui element)? --> using the wrong shader makes it exist in 3d space.
+- why is it not a circle? --> messed up telling opengl how to parse vertex data
+- why was it not a full circle? --> c++ vector: giving the wrong number of bytes to glBufferData()
+- why does the raw float array make it not a full circle? --> missed copying the first vertex from the print output
+ */
 
 
