@@ -13,8 +13,12 @@
 #include "shader.hpp"
 #include <vector>
 
+#include "UserInput.hpp"
+
 int CUBE_INDEX_MAX = 3;
 int CUBE_INDEX = 0;
+
+
 
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
 const glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
@@ -24,64 +28,25 @@ float deltaTime = 0.0f;
 float lastUpdateTime = 0.0f; // number of seconds since last loop
 float lastFrameTime = 0.0f; // number of seconds since last frame
 
-std::vector<glm::vec2> makeCircleVertices() {
-  std::vector<glm::vec2> vertices;
-  int segments = 64;
-  float r = 1.0f;
-
-  for (int i=0; i<segments; i++) {
-    float t = 2.0f * M_PI * (float)i / segments;
-    float x = r * cos(t);
-    float y = r * sin(t);
-    vertices.emplace_back(x, y);
-  }
-  return vertices;
-}
-
 void printVec3(glm::vec3 v) {
   std::cout << v.x << ", " << v.y << ", " << v.z << std::endl;
 }
 
-double yaw = -90.0f;
-glm::vec3 direction = glm::vec3(0.0f, 0.0f, -1.0f);
-void processInput(GLFWwindow* window) {
-  const float cameraSpeed = 10 * deltaTime;
 
-  if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-    // cameraPos += cameraSpeed * cameraFront;
-    cameraPos += cameraSpeed * direction;
+/* Not technically a wrapper since there's not actually a glfwGetInputMode
+ * but I think it's more consistent and less weird to do it this way.
+ * Also, of course this doesn't really have the functionality to support
+ * multiple windows or anything, but hey this program is a sandbox after all. */
+int wrapper_glfwGetInputMode(int mode) {
+  if (mode == GLFW_CURSOR) {
+    return g_glfwCursorMode;
   }
-  if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-    // cameraPos -= cameraSpeed * cameraFront;
-    cameraPos -= cameraSpeed * direction;
+  else {
+    std::cout << "ERROR: wrapper_glfwGetInputMode() : unsupported glfw input mode" << std::endl;
+    return -1;
   }
-  if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-    // cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-    cameraPos -= glm::normalize(glm::cross(direction, cameraUp)) * cameraSpeed;
-  }
-  if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-    // cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-    cameraPos += glm::normalize(glm::cross(direction, cameraUp)) * cameraSpeed;
-  }
-  if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-    cameraPos -= cameraSpeed * cameraUp;
-  }
-  if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-    cameraPos += cameraSpeed * cameraUp;
-  }
-
-  if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
-    yaw -= 0.001;
-  }
-  if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
-    yaw += 0.001;
-  }
-  if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
-    std::cout << "yaw = " << yaw << std::endl;
-    printVec3(direction);
-  }
-
 }
+
 
 
 void parseCubePositions(std::vector<glm::vec3> &cubePositions) {
@@ -144,74 +109,8 @@ void framebuffer_size_callback(GLFWwindow*, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
-float curCamAngle = 0.0f;
-double lastXPos;
-void mouse_callback(GLFWwindow* window, double xPos, double yPos) {
-  if (xPos == 0.0f) return;
-  double xPosDelta = lastXPos - xPos;
-  // std::cout << "xPosDelta: " << xPosDelta << std::endl;
-  
-  lastXPos = xPos;
-
-}
-
-float camX = 0.0f;
-float camZ = 10.0f;
-float CAM_MAX = 10.0f;
-float CAM_TICK = 0.1f;
-
-#define KEYPRESSED(goalKey) ( key == goalKey && action == GLFW_PRESS )
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    if (key == GLFW_KEY_Q && action == GLFW_PRESS) {
-        std::cout << "q pressed" << std::endl;
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
-    }
-
-    // Handle arrow inputs
-    // if (key == GLFW_KEY_LEFT && action == GLFW_PRESS) {
-    if (KEYPRESSED(GLFW_KEY_LEFT)) {
-      CUBE_INDEX--;
-    }
-    if (KEYPRESSED(GLFW_KEY_RIGHT)) {
-      CUBE_INDEX++;
-    }
-    if (CUBE_INDEX < 0) CUBE_INDEX = CUBE_INDEX_MAX;
-    if (CUBE_INDEX > CUBE_INDEX_MAX) CUBE_INDEX = 0;
-    // if (KEYPRESSED(GLFW_KEY_A)) {
-    //   if (camX < 0 && camX <= CAM_MAX) {
-    //     camX = 0.0f;
-    //     camZ = -CAM_INCREMENT;
-    //   }
-    //   else if (camZ < 0) {
-    //     camX = CAM_INCREMENT;
-    //     camZ = 0.0f;
-    //   }
-    //   else if (camX > 0) {
-    //     camX = 0.0f;
-    //     camZ = CAM_INCREMENT;
-    //   }
-    //   else {
-    //     camX = -CAM_INCREMENT;
-    //     camZ = 0;
-    //   }
-    // }
-    if (key == GLFW_KEY_D && action == GLFW_REPEAT) {
-      if (camX >= CAM_MAX) return;
-      camX += CAM_TICK;
-      camZ = -camX + CAM_MAX;
-    }
-    if (key == GLFW_KEY_A && action == GLFW_REPEAT) {
-      if (camX <= -CAM_MAX) return;
-      camX -= CAM_TICK;
-      camZ = camX + CAM_MAX;
-    }
 
 
-
-
-
-
-}
 
 
 int main() {
@@ -220,8 +119,9 @@ int main() {
         return -1;
     }
 
+    float ASPECT_RATIO = 16.0/9.0;
     int WINDOW_WIDTH = 800;
-    int WINDOW_HEIGHT = 800;
+    int WINDOW_HEIGHT = 800.0 / ASPECT_RATIO;
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -251,6 +151,9 @@ int main() {
     
     glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    wrapper_glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 
     Shader shader("src/shaders/shader.vert", "src/shaders/shader.frag");
@@ -374,27 +277,6 @@ int main() {
 
 
 
-    /* ==========================
-     *    CIRCLE MINIMAP SETUP
-     * ========================== */
-    Shader circleShader("src/shaders/circle.vert", "src/shaders/circle.frag");
-
-    unsigned int circleVAO, circleVBO;
-    glGenVertexArrays(1, &circleVAO);
-    glGenBuffers(1, &circleVBO);
-
-    glBindVertexArray(circleVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, circleVBO);
-
-    std::vector<glm::vec2> circleVertices = makeCircleVertices();
-    glBufferData(GL_ARRAY_BUFFER, circleVertices.size() * sizeof(glm::vec2), circleVertices.data(), GL_STATIC_DRAW);
-
-
-    posLoc = glGetAttribLocation(circleShader.programID, "aPos");
-    glVertexAttribPointer(posLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
-    glEnableVertexAttribArray(posLoc);
-
-
 
 
 
@@ -438,10 +320,17 @@ int main() {
          *      VIEW MATRIX 
          * ========================== */
         glm::mat4 view;
-        direction.x = cos(glm::radians(yaw));
-        direction.z = sin(glm::radians(yaw));
+        // direction.x = cos(glm::radians(yaw));
+        // direction.z = sin(glm::radians(yaw));
         // view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-        view = glm::lookAt(cameraPos, cameraPos + direction, cameraUp);
+        // std::cout << std::endl;
+        // std::cout << "yaw=" << yaw << std::endl;
+        // std::cout << "cos(yaw)=" << cos(glm::radians(yaw)) << std::endl;
+        // std::cout << "sin(yaw)=" << sin(glm::radians(yaw)) << std::endl;
+        Camera::direction.x = cos(glm::radians(Camera::yaw));
+        Camera::direction.y = sin(glm::radians(Camera::pitch));
+        Camera::direction.z = cos(glm::radians(Camera::pitch)) * sin(glm::radians(Camera::yaw));
+        view = glm::lookAt(cameraPos, cameraPos + Camera::direction, cameraUp);
 
         int viewLoc = glGetUniformLocation(shader.programID, "view");
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
@@ -466,7 +355,7 @@ int main() {
           model = glm::translate(model, cubePositions[i]);
           float angle = 10.0f * i;
           // model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-          modelLoc = glGetUniformLocation(circleShader.programID, "model");
+          modelLoc = glGetUniformLocation(shader.programID, "model");
           glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
           
           glUniform3fv(cubeColorLoc, 1, cubeColors+(i*3));
@@ -482,18 +371,6 @@ int main() {
         }
 
 
-        /* ==========================
-         *     DRAW CIRCLE MINIMAP
-         * ========================== */
-        circleShader.use();
-        glBindVertexArray(circleVAO);
-        int circleSegments = 64;
-        glDrawArrays(GL_LINE_LOOP, 0, circleSegments); // ques: what is GL_LINE_LOOP?
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::scale(model, glm::vec3(0.5, 0.5, 0.5));
-        modelLoc = glGetUniformLocation(circleShader.programID, "model");
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-
 
 
         processInput(window);
@@ -507,15 +384,24 @@ int main() {
 
 /*
 Current task:
-- make circle not take up entire screen--model matrix?
-^^^ got this to work! Now continue tinkering with it.
+* tinkering with mouse input
 
 
 Next steps:
-- Add in MVP matrix stuff so I can make the circle smaller
-- implement the other "piece" of the mini map to indicate 
-  what the current angle is (a line? a dot? idk)
-- How to change thickness of circle outline?
+* I switched the window size to be 16:9, but because it's no longer a square,
+  the different ratio between width and height causes the yaw and pitch mouse input
+  to feel different. I assume aspect ratio needs to be taken into account for mouse input?
+* tinker with and understand why pitch adjustment needs to be += while yaw is -=
+    WILO: trying to understand why yaw is added to, while pitch is subtracted from.
+            It may be related to how in graphics we "think" the camera is moving around
+            a stationary scene, but in reality it's a stationary camera with the entire
+            scene moving around it. So I was adding some yaw, cos, and sin output to main
+            to better develop a mental map, but ran into a secondary issue where I couldn't
+            move the GLFW window once the program is running, so I started adding logic
+            to bring back the cursor so I can move the window. Got that working, just need
+            to also make it so the cursor can disappear again.
+* figure out how to make the "player" walk on a plane, rather than walk in the direction that
+  the camera is pointing in.
 
 Questions:
 - What is GL_LINE_LOOP? What is the first arg to glDrawArrays() in general?
