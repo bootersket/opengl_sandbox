@@ -45,17 +45,30 @@ void printVec3(glm::vec3 v);
 void mouse_callback(GLFWwindow* window, double xPos, double yPos) {
   static double lastXPos;
   static double lastYPos;
-  static float curCamAngle = 0.0f;
 
   double xPosDelta = xPos - lastXPos;
-  yaw += xPosDelta * MOUSE_SENSITIVITY_MULTIPLIER;
-  lastXPos = xPos;
-
-  // std::cout << "yPos: " << yPos << std::endl;
-  // std::cout << "pitch: " << pitch << std::endl;
   double yPosDelta = yPos - lastYPos;
-  pitch -= yPosDelta * MOUSE_SENSITIVITY_MULTIPLIER;
+  lastXPos = xPos;
   lastYPos = yPos;
+
+  yaw += xPosDelta * MOUSE_SENSITIVITY_MULTIPLIER;
+  // lastXPos = xPos;
+
+  // double yPosDelta = yPos - lastYPos;
+  pitch -= yPosDelta * MOUSE_SENSITIVITY_MULTIPLIER;
+  // lastYPos = yPos;
+  
+  if (pitch > 89) pitch = 89;
+  if (pitch < -89) pitch = -89;
+
+  /* This logic is to avoid the camera jitter that happens
+   * when first running the program */
+  static bool firstMouse = true;
+  if (firstMouse) {
+    lastXPos = xPos;
+    lastYPos = yPos;
+    firstMouse = false;
+  }
 
 }
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
@@ -409,11 +422,6 @@ int main() {
 
     float fps = 60.0f;
     float secPerFrame = 1.0f/fps;
-
-
-
-
-
 
 
     /* ==========================
