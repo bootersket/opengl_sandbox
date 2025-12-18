@@ -58,8 +58,8 @@ void mouse_callback(GLFWwindow* window, double xPos, double yPos) {
   pitch -= yPosDelta * MOUSE_SENSITIVITY_MULTIPLIER;
   // lastYPos = yPos;
   
-  if (pitch > 89) pitch = 89;
-  if (pitch < -89) pitch = -89;
+  if (pitch > 89.0) pitch = 89.0;
+  if (pitch < -89.0) pitch = -89.0;
 
   /* This logic is to avoid the camera jitter that happens
    * when first running the program */
@@ -76,6 +76,16 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
   if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS && cursorMode == GLFW_CURSOR_NORMAL) {
       wrapper_glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   }
+}
+
+WILO: now need to use the new camera.hpp class code.
+float fov = 45.0f;
+void scroll_callback(GLFWwindow* window, double xOffset, double yOffset) {
+  float MIN_FOV = 1.0f;
+  float MAX_FOV = 90.0f;
+  fov -= (float)yOffset;
+  if (fov < MIN_FOV) fov = MIN_FOV;
+  if (fov > MAX_FOV) fov = MAX_FOV;
 }
 
 float camX = 0.0f;
@@ -301,6 +311,7 @@ int main() {
     glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetScrollCallback(window, scroll_callback);
     wrapper_glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -398,7 +409,7 @@ int main() {
     // view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 
     glm::mat4 projection;
-    projection = glm::perspective(glm::radians(45.0f), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
+    // projection = glm::perspective(glm::radians(fov), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
     // left right bottom top near far
     // todo how to get ortho to work? are my values eg. near & far wrong? or is something else amiss?
     // projection = glm::ortho(0.0f, (float)WINDOW_WIDTH, 0.0f, (float)WINDOW_HEIGHT, 0.1f, 100.0f);
@@ -441,7 +452,7 @@ int main() {
       }
       lastUpdateTime = now;
 
-
+        projection = glm::perspective(glm::radians(fov), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.0f);
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
