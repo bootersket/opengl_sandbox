@@ -7,10 +7,12 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "numbers.hpp"
+
 #define MOVE_SPEED_X 5.0f
 float xPos = 0.0f;
-float yPos = 0.0f;
 float deltaTime = 0.0f;
+int num = 0;
 
 bool keyStates[500]; // GLFW keys are 32 - 348
 
@@ -32,14 +34,26 @@ void updateKeyState(GLFWwindow* window, int key) {
 }
 
 void updatePos() {
+  // todo change this check to a func/macro called like keyPressed?
   if (keyStates[GLFW_KEY_D]) xPos += MOVE_SPEED_X * deltaTime;
   if (keyStates[GLFW_KEY_A]) xPos -= MOVE_SPEED_X * deltaTime;
-  if (keyStates[GLFW_KEY_W]) yPos += MOVE_SPEED_X * deltaTime;
-  if (keyStates[GLFW_KEY_S]) yPos -= MOVE_SPEED_X * deltaTime;
   xPos = std::min(2.1f, xPos);
   xPos = std::max(-2.1f, xPos);
-  yPos = std::min(1.2f, yPos);
-  yPos = std::max(-1.2f, yPos);
+
+  std::cout << "num: " << num << std::endl;
+}
+
+void updateNum() {
+  if (keyStates[GLFW_KEY_0]) num = 0;
+  if (keyStates[GLFW_KEY_1]) num = 1;
+  if (keyStates[GLFW_KEY_2]) num = 2;
+  if (keyStates[GLFW_KEY_3]) num = 3;
+  if (keyStates[GLFW_KEY_4]) num = 4;
+  if (keyStates[GLFW_KEY_5]) num = 5;
+  if (keyStates[GLFW_KEY_6]) num = 6;
+  if (keyStates[GLFW_KEY_7]) num = 7;
+  if (keyStates[GLFW_KEY_8]) num = 8;
+  if (keyStates[GLFW_KEY_9]) num = 9;
 }
 
 bool dDown = false;
@@ -48,10 +62,19 @@ void processKeyInput(GLFWwindow* window) {
   updateKeyState(window, GLFW_KEY_A);
   updateKeyState(window, GLFW_KEY_W);
   updateKeyState(window, GLFW_KEY_S);
+  updateKeyState(window, GLFW_KEY_0);
+  updateKeyState(window, GLFW_KEY_1);
+  updateKeyState(window, GLFW_KEY_2);
+  updateKeyState(window, GLFW_KEY_3);
+  updateKeyState(window, GLFW_KEY_4);
+  updateKeyState(window, GLFW_KEY_5);
+  updateKeyState(window, GLFW_KEY_6);
+  updateKeyState(window, GLFW_KEY_7);
+  updateKeyState(window, GLFW_KEY_8);
+  updateKeyState(window, GLFW_KEY_9);
 
   updatePos();
-
-
+  updateNum();
 }
 
 void cleanup(GLFWwindow* window) {
@@ -111,7 +134,7 @@ void checkForShaderCompileErrors(GLuint shader, int shaderType) {
   }
 }
 
-GLuint createShaderProgram() {
+GLuint createShaderProgram(std::string shaderName) {
   std::string vertexShaderSourceCode;
   std::string fragShaderSourceCode;
 
@@ -125,8 +148,8 @@ GLuint createShaderProgram() {
   fragShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   
   try {
-    vertexShaderFile.open("src/brickbounce/shader.vert");
-    fragShaderFile.open("src/brickbounce/shader.frag");
+    vertexShaderFile.open("src/brickbounce/" + shaderName + ".vert");
+    fragShaderFile.open("src/brickbounce/" + shaderName + ".frag");
 
     // Read file's buffer contents into stream
     vertexShaderStream << vertexShaderFile.rdbuf();
@@ -178,9 +201,12 @@ int main() {
   GLFWwindow* window = createWindow(WINDOW_WIDTH, WINDOW_HEIGHT);
   if (window == NULL) return -1;
 
-  GLuint shaderProgram = createShaderProgram();
+  GLuint shaderProgram = createShaderProgram("shader");
   GLint posAttrLoc = glGetAttribLocation(shaderProgram, "aPos");
   GLint colorAttrLoc = glGetAttribLocation(shaderProgram, "aColor");
+
+  GLuint numberShaderProgram = createShaderProgram("number");
+  GLint numberPosAttrLoc = glGetAttribLocation(numberShaderProgram, "aPos");
 
   float playerVertices[] = {
     -0.5f, 0.1f, 0.0f, 1.0f, 0.0f,
@@ -212,24 +238,61 @@ int main() {
   glVertexAttribPointer(colorAttrLoc, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(2*sizeof(float)));
   glEnableVertexAttribArray(colorAttrLoc);
 
-  float sevenVertices[] = {
-    -.3f, .5f, 1.0f, 0.0f, 0.0f,
-    .3f, .5f, 1.0f, 0.0f, 0.0f,
-    .3f, .3f, 1.0f, 0.0f, 0.0f,
-    .3f, -.5f, 1.0f, 0.0f, 0.0f,
-    .1f, -.5f, 1.0f, 0.0f, 0.0f,
-    .1f, .3f, 1.0f, 0.0f, 0.0f,
-    -.3f, .3f, 1.0f, 0.0f, 0.0f
-  };
+  // float sevenVertices[] = {
+  //   -3.0f, 5.0f, 1.0f, 0.0f, 0.0f,
+  //   3.0f, 5.0f, 1.0f, 0.0f, 0.0f,
+  //   3.0f, 3.0f, 1.0f, 0.0f, 0.0f,
+  //   3.0f, -5.0f, 1.0f, 0.0f, 0.0f,
+  //   1.0f, -5.0f, 1.0f, 0.0f, 0.0f,
+  //   1.0f, 3.0f, 1.0f, 0.0f, 0.0f,
+  //   -3.0f, 3.0f, 1.0f, 0.0f, 0.0f
+  // };
+  //
+  //
+  // unsigned int sevenIndices[] = {
+  //   0, 6, 1,
+  //   1, 6, 2,
+  //   2, 5, 3,
+  //   5, 4, 3
+  // };
+
+  /*---------- ONE --------------*/
+  GLuint oneVAO, oneVBO, oneEBO;
+
+  glGenVertexArrays(1, &oneVAO);
+  glBindVertexArray(oneVAO);
+
+  glGenBuffers(1, &oneVBO);
+  glBindBuffer(GL_ARRAY_BUFFER, oneVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(oneVertices), oneVertices, GL_STATIC_DRAW);
+
+  glGenBuffers(1, &oneEBO);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, oneEBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(oneIndices), oneIndices, GL_STATIC_DRAW);
 
 
-  unsigned int sevenIndices[] = {
-    0, 6, 1,
-    1, 6, 2,
-    2, 5, 3,
-    5, 4, 3
-  };
+  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+  glEnableVertexAttribArray(numberPosAttrLoc);
 
+  /*---------- TWO --------------*/
+  GLuint twoVAO, twoVBO, twoEBO;
+
+  glGenVertexArrays(1, &twoVAO);
+  glBindVertexArray(twoVAO);
+
+  glGenBuffers(1, &twoVBO);
+  glBindBuffer(GL_ARRAY_BUFFER, twoVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(twoVertices), twoVertices, GL_STATIC_DRAW);
+
+  glGenBuffers(1, &twoEBO);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, twoEBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(twoIndices), twoIndices, GL_STATIC_DRAW);
+
+
+  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+  glEnableVertexAttribArray(numberPosAttrLoc);
+
+  /*---------- SEVEN --------------*/
   GLuint sevenVAO, sevenVBO, sevenEBO;
 
   glGenVertexArrays(1, &sevenVAO);
@@ -244,11 +307,11 @@ int main() {
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(sevenIndices), sevenIndices, GL_STATIC_DRAW);
 
 
-  glVertexAttribPointer(posAttrLoc, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)0);
-  glEnableVertexAttribArray(posAttrLoc);
+  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+  glEnableVertexAttribArray(numberPosAttrLoc);
 
-  glVertexAttribPointer(colorAttrLoc, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(2*sizeof(float)));
-  glEnableVertexAttribArray(colorAttrLoc);
+  // glVertexAttribPointer(colorAttrLoc, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(2*sizeof(float)));
+  // glEnableVertexAttribArray(number);
 
   glm::mat4 model = glm::mat4(1.0f);
   // model = glm::rotate(model, glm::radians(13.0f), glm::vec3(1.0f, 0.0f, 1.0f));
@@ -264,8 +327,19 @@ int main() {
   int viewLoc = glGetUniformLocation(shaderProgram, "view");
   int projectionLoc = glGetUniformLocation(shaderProgram, "projection");
 
-  glUseProgram(shaderProgram);
+  /* Load uniforms to number shader */
+  int numberModelLoc = glGetUniformLocation(numberShaderProgram, "model");
+  int numberViewLoc = glGetUniformLocation(numberShaderProgram, "view");
+  int numberProjectionLoc = glGetUniformLocation(numberShaderProgram, "projection");
+  int colorUniformLoc = glGetUniformLocation(numberShaderProgram, "uColor");
+  glUseProgram(numberShaderProgram);
+  glUniform3f(colorUniformLoc, 1.0f, 0.1f, 0.1f);
+  glUniformMatrix4fv(numberModelLoc, 1, GL_FALSE, glm::value_ptr(model));
+  glUniformMatrix4fv(numberViewLoc, 1, GL_FALSE, glm::value_ptr(view));
+  glUniformMatrix4fv(numberProjectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+  /* Load uniforms to base shader */
+  glUseProgram(shaderProgram);
   glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
   glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
   glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
@@ -281,17 +355,29 @@ int main() {
     glClearColor(0.0f, 0.6f, 0.2f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // Draw number/text (WIP)
-    glBindVertexArray(sevenVAO);
+    /* Draw number/text */
+    glUseProgram(numberShaderProgram);
     // model = glm::translate(glm::mat4(1.0f), glm::vec3(xPos, 0.0f, 0.0f));
     model = glm::mat4(1.0f);
+    model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.0f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
+    if (num == 1) {
+      glBindVertexArray(oneVAO);
+      glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    }
+    else if (num == 2) {
+      glBindVertexArray(twoVAO);
+      glDrawElements(GL_TRIANGLES, 30, GL_UNSIGNED_INT, 0);
+    }
+    else if (num == 7) {
+      glBindVertexArray(sevenVAO);
+      glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
+    }
 
-    // todo
 
+    /* Draw player */
     glUseProgram(shaderProgram);
-    model = glm::translate(glm::mat4(1.0f), glm::vec3(xPos, yPos, 0.0f));
+    model = glm::translate(glm::mat4(1.0f), glm::vec3(xPos, -1.0f, 0.0f));
     model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.0f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
@@ -317,11 +403,19 @@ int main() {
 }
 
 /*
-WILO: got the seven to show up!!!
+WILO: got the one and two show up!! code is pretty gross, but just working on making it work for now. Next steps:
+could implement all numbers. but I think I understand it well enough to pivot towards making this functionality
+less dogshit and more DRY (like mentioned below, make a class for numbers that encapsulates the relevant data.)
+Ideally some sort of draw function like drawNumber(1) would draw 1 (and of course implement it for double digits
+after single digits is working, etc).
+Then worry about positioning, scaling, etc.
+Then hooking it up to the FPS calculated via the render loop
 Questions/next steps:
+- Refactor idea: make a class that encapsulates a single number (vertices, indices, vao, vbo, ebo, shader (??questionable))
 - scale it down and position it.
 - expand functionality to all numbers (make new file for this?)
-- ?? why is the color 1. blue and 2. a weird fade from black to blue?
+- remove colors from numbers vertices
+- write some sort of pattern parser so I can create an ASCII shape and turn it into a shape to be rendered in the scene
  * Things to do:
  - nvim: remove the auto * in these multiline comments when going to a new line.
  - keep rect from going off screen
