@@ -40,7 +40,6 @@ void updatePos() {
   xPos = std::min(2.1f, xPos);
   xPos = std::max(-2.1f, xPos);
 
-  std::cout << "num: " << num << std::endl;
 }
 
 void updateNum() {
@@ -75,6 +74,23 @@ void processKeyInput(GLFWwindow* window) {
 
   updatePos();
   updateNum();
+}
+
+void createNumber(float vertices[], unsigned int indices[], GLuint &vao, GLuint &vbo, GLuint &ebo) {
+  glGenVertexArrays(1, &vao);
+  glBindVertexArray(vao);
+
+  glGenBuffers(1, &vbo);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+  glGenBuffers(1, &ebo);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+  // glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+  // glEnableVertexAttribArray(numberPosAttrLoc);
+
 }
 
 void cleanup(GLFWwindow* window) {
@@ -256,6 +272,24 @@ int main() {
   //   5, 4, 3
   // };
 
+  /*---------- ZERO --------------*/
+  GLuint zeroVAO, zeroVBO, zeroEBO;
+
+  glGenVertexArrays(1, &zeroVAO);
+  glBindVertexArray(zeroVAO);
+
+  glGenBuffers(1, &zeroVBO);
+  glBindBuffer(GL_ARRAY_BUFFER, zeroVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(zeroVertices), zeroVertices, GL_STATIC_DRAW);
+
+  glGenBuffers(1, &zeroEBO);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, zeroEBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(zeroIndices), zeroIndices, GL_STATIC_DRAW);
+
+
+  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+  glEnableVertexAttribArray(numberPosAttrLoc);
+
   /*---------- ONE --------------*/
   GLuint oneVAO, oneVBO, oneEBO;
 
@@ -361,7 +395,11 @@ int main() {
     model = glm::mat4(1.0f);
     model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.0f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    if (num == 1) {
+    if (num == 0) {
+      glBindVertexArray(zeroVAO);
+      glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
+    }
+    else if (num == 1) {
       glBindVertexArray(oneVAO);
       glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     }

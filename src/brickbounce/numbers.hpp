@@ -1,4 +1,27 @@
 #pragma once
+float zeroVertices[] = {
+  -3.0f, 5.0f,
+  -3.0f, -5.0f,
+  3.0f, -5.0f,
+  -3.0f, 5.0f,
+  -1.0f, 2.0f,
+  -1.0f, -2.0f,
+  1.0f, -2.0f,
+  1.0f, 2.0f
+};
+
+unsigned int zeroIndices[] = {
+  0, 4, 3,
+  0, 5, 4,
+  0, 1, 5,
+  5, 1, 6,
+  6, 1, 2,
+  7, 6, 2,
+  3, 7, 2,
+  3, 4, 7
+};
+
+
 float oneVertices[] = {
   -1.0f, 5.0f,
   -1.0f, -5.0f,
