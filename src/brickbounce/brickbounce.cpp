@@ -76,17 +76,17 @@ void processKeyInput(GLFWwindow* window) {
   updateNum();
 }
 
-void createNumber(float vertices[], unsigned int indices[], GLuint &vao, GLuint &vbo, GLuint &ebo) {
+void createNumber(float vertices[], int verticesSize, unsigned int indices[], int indicesSize, GLuint &vao, GLuint &vbo, GLuint &ebo) {
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
 
   glGenBuffers(1, &vbo);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, verticesSize, vertices, GL_STATIC_DRAW);
 
   glGenBuffers(1, &ebo);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicesSize, indices, GL_STATIC_DRAW);
 
   // glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
   // glEnableVertexAttribArray(numberPosAttrLoc);
@@ -272,80 +272,58 @@ int main() {
   //   5, 4, 3
   // };
 
+
+  // next steps:
+  // * create a class to represent number models
+  // * create array/vector of number model stuff
+  // * add rest of the number models
+  // * fix zero model
+  //
+
+
+
   /*---------- ZERO --------------*/
-  GLuint zeroVAO, zeroVBO, zeroEBO;
-
-  glGenVertexArrays(1, &zeroVAO);
-  glBindVertexArray(zeroVAO);
-
-  glGenBuffers(1, &zeroVBO);
-  glBindBuffer(GL_ARRAY_BUFFER, zeroVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(zeroVertices), zeroVertices, GL_STATIC_DRAW);
-
-  glGenBuffers(1, &zeroEBO);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, zeroEBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(zeroIndices), zeroIndices, GL_STATIC_DRAW);
-
-
+  GLuint vao0, vbo0, ebo0;
+  createNumber(vertices0, sizeof(vertices0), indices0, sizeof(indices0), vao0, vbo0, ebo0);
   glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
   glEnableVertexAttribArray(numberPosAttrLoc);
 
+
   /*---------- ONE --------------*/
-  GLuint oneVAO, oneVBO, oneEBO;
-
-  glGenVertexArrays(1, &oneVAO);
-  glBindVertexArray(oneVAO);
-
-  glGenBuffers(1, &oneVBO);
-  glBindBuffer(GL_ARRAY_BUFFER, oneVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(oneVertices), oneVertices, GL_STATIC_DRAW);
-
-  glGenBuffers(1, &oneEBO);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, oneEBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(oneIndices), oneIndices, GL_STATIC_DRAW);
-
-
+  GLuint vao1, vbo1, ebo1;
+  createNumber(vertices1, sizeof(vertices1), indices1, sizeof(indices1), vao1, vbo1, ebo1);
   glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
   glEnableVertexAttribArray(numberPosAttrLoc);
 
   /*---------- TWO --------------*/
-  GLuint twoVAO, twoVBO, twoEBO;
-
-  glGenVertexArrays(1, &twoVAO);
-  glBindVertexArray(twoVAO);
-
-  glGenBuffers(1, &twoVBO);
-  glBindBuffer(GL_ARRAY_BUFFER, twoVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(twoVertices), twoVertices, GL_STATIC_DRAW);
-
-  glGenBuffers(1, &twoEBO);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, twoEBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(twoIndices), twoIndices, GL_STATIC_DRAW);
-
-
+  GLuint vao2, vbo2, ebo2;
+  createNumber(vertices2, sizeof(vertices2), indices2, sizeof(indices2), vao2, vbo2, ebo2);
   glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
   glEnableVertexAttribArray(numberPosAttrLoc);
+
+  /*---------- THREE --------------*/
+  GLuint vao3, vbo3, ebo3;
+  createNumber(vertices3, sizeof(vertices3), indices3, sizeof(indices3), vao3, vbo3, ebo3);
+  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+  glEnableVertexAttribArray(numberPosAttrLoc);
+
 
   /*---------- SEVEN --------------*/
-  GLuint sevenVAO, sevenVBO, sevenEBO;
-
-  glGenVertexArrays(1, &sevenVAO);
-  glBindVertexArray(sevenVAO);
-
-  glGenBuffers(1, &sevenVBO);
-  glBindBuffer(GL_ARRAY_BUFFER, sevenVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(sevenVertices), sevenVertices, GL_STATIC_DRAW);
-
-  glGenBuffers(1, &sevenEBO);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sevenEBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(sevenIndices), sevenIndices, GL_STATIC_DRAW);
-
-
+  GLuint vao7, vbo7, ebo7;
+  createNumber(vertices7, sizeof(vertices7), indices7, sizeof(indices7), vao7, vbo7, ebo7);
   glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
   glEnableVertexAttribArray(numberPosAttrLoc);
 
-  // glVertexAttribPointer(colorAttrLoc, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(2*sizeof(float)));
-  // glEnableVertexAttribArray(number);
+
+  GLuint vao4, vao5, vao6, vao8, vao9;
+  GLuint vbo4, vbo5, vbo6, vbo8, vbo9;
+  GLuint ebo4, ebo5, ebo6, ebo8, ebo9;
+
+
+
+
+
+
 
   glm::mat4 model = glm::mat4(1.0f);
   // model = glm::rotate(model, glm::radians(13.0f), glm::vec3(1.0f, 0.0f, 1.0f));
@@ -395,23 +373,63 @@ int main() {
     model = glm::mat4(1.0f);
     model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.0f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    if (num == 0) {
-      glBindVertexArray(zeroVAO);
-      glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
+    switch (num) {
+      case 0:
+        glBindVertexArray(vao0);
+        glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
+        break;
+      case 1:
+        glBindVertexArray(vao1);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        break;
+      case 2:
+        glBindVertexArray(vao2);
+        glDrawElements(GL_TRIANGLES, 30, GL_UNSIGNED_INT, 0);
+        break;
+      case 3:
+        glBindVertexArray(vao3);
+        glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
+        break;
+      case 4:
+        glBindVertexArray(vao4);
+        glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
+        break;
+      case 5:
+        glBindVertexArray(vao5);
+        glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
+        break;
+      case 6:
+        glBindVertexArray(vao6);
+        glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
+        break;
+      case 7:
+        glBindVertexArray(vao7);
+        glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
+        break;
+      case 8:
+        glBindVertexArray(vao8);
+        glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
+        break;
+      case 9:
+        glBindVertexArray(vao9);
+        glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
+        break;
     }
-    else if (num == 1) {
-      glBindVertexArray(oneVAO);
-      glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    }
-    else if (num == 2) {
-      glBindVertexArray(twoVAO);
-      glDrawElements(GL_TRIANGLES, 30, GL_UNSIGNED_INT, 0);
-    }
-    else if (num == 7) {
-      glBindVertexArray(sevenVAO);
-      glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
-    }
-
+    // if (num == 0) {
+    // }
+    // else if (num == 1) {
+    //   glBindVertexArray(oneVAO);
+    //   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    // }
+    // else if (num == 2) {
+    //   glBindVertexArray(twoVAO);
+    //   glDrawElements(GL_TRIANGLES, 30, GL_UNSIGNED_INT, 0);
+    // }
+    // else if (num == 7) {
+    //   glBindVertexArray(sevenVAO);
+    //   glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
+    // }
+    //
 
     /* Draw player */
     glUseProgram(shaderProgram);

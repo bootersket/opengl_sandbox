@@ -1,16 +1,16 @@
 #pragma once
-float zeroVertices[] = {
+float vertices0[] = {
   -3.0f, 5.0f,
   -3.0f, -5.0f,
   3.0f, -5.0f,
-  -3.0f, 5.0f,
+  3.0f, 5.0f,
   -1.0f, 2.0f,
   -1.0f, -2.0f,
   1.0f, -2.0f,
   1.0f, 2.0f
 };
 
-unsigned int zeroIndices[] = {
+unsigned int indices0[] = {
   0, 4, 3,
   0, 5, 4,
   0, 1, 5,
@@ -22,19 +22,19 @@ unsigned int zeroIndices[] = {
 };
 
 
-float oneVertices[] = {
+float vertices1[] = {
   -1.0f, 5.0f,
   -1.0f, -5.0f,
   1.0f, -5.0f,
   1.0f, 5.0f
 };
 
-unsigned int oneIndices[] = {
+unsigned int indices1[] = {
   0, 2, 3,
   0, 1, 2
 };
 
-float twoVertices[] = {
+float vertices2[] = {
   -3.0f, 5.0f,
   -3.0f, 3.0f,
   1.0f, 3.0f,
@@ -43,13 +43,12 @@ float twoVertices[] = {
   -3.0f, -5.0f,
   3.0f, -5.0f,
   3.0f, -3.0f,
-  -1.0f, -3.0f,
-  -1.0f, -1.0f,
+  -1.0f, -3.0f, -1.0f, -1.0f,
   3.0f, -1.0f,
   3.0f, 5.0f
 };
 
-unsigned int twoIndices[] = {
+unsigned int indices2[] = {
   0, 1, 2,
   0, 2, 11,
   11, 2, 10,
@@ -62,7 +61,33 @@ unsigned int twoIndices[] = {
   7, 5, 6
 };
 
-float sevenVertices[] = {
+float vertices3[] = {
+  -3.0f, 5.0f,
+  -3.0f, 3.0f,
+  1.0f, 3.0f,
+  1.0f, 1.0f,
+  -3.0f, 1.0f,
+  -3.0f, -1.0f,
+  1.0f, -1.0f,
+  1.0f, -3.0f,
+  -3.0f, -3.0f,
+  -3.0f, -5.0f,
+  3.0f, -5.0f,
+  3.0f, 5.0f
+};
+
+unsigned int indices3[] = {
+  0, 1, 2,
+  0, 2, 11,
+  11, 2, 10,
+  2, 7, 10,
+  3, 5, 6,
+  4, 5, 3,
+  8, 9, 7,
+  7, 9, 10
+};
+
+float vertices7[] = {
   -3.0f, 5.0f,
   3.0f, 5.0f,
   3.0f, 3.0f,
@@ -73,7 +98,7 @@ float sevenVertices[] = {
 };
 
 
-unsigned int sevenIndices[] = {
+unsigned int indices7[] = {
   0, 6, 1,
   1, 6, 2,
   2, 5, 3,
