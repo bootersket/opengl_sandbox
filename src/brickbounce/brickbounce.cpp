@@ -307,19 +307,62 @@ int main() {
   glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
   glEnableVertexAttribArray(numberPosAttrLoc);
 
+  /*---------- FOUR --------------*/
+  GLuint vao4, vbo4, ebo4;
+  createNumber(vertices4, sizeof(vertices4), indices4, sizeof(indices4), vao4, vbo4, ebo4);
+  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+  glEnableVertexAttribArray(numberPosAttrLoc);
 
-  /*---------- SEVEN --------------*/
+  /*---------- FIVE --------------*/
+  GLuint vao5, vbo5, ebo5;
+  createNumber(vertices5, sizeof(vertices5), indices5, sizeof(indices5), vao5, vbo5, ebo5);
+  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+  glEnableVertexAttribArray(numberPosAttrLoc);
+
+  /*---------- SIX --------------*/
+  GLuint vao6, vbo6, ebo6;
+  createNumber(vertices6, sizeof(vertices6), indices6, sizeof(indices6), vao6, vbo6, ebo6);
+  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+  glEnableVertexAttribArray(numberPosAttrLoc);
+
+  // /*---------- SEVEN --------------*/
   GLuint vao7, vbo7, ebo7;
   createNumber(vertices7, sizeof(vertices7), indices7, sizeof(indices7), vao7, vbo7, ebo7);
   glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
   glEnableVertexAttribArray(numberPosAttrLoc);
 
+  /*---------- SEVEN --------------*/
+  GLuint vao8, vbo8, ebo8;
+  createNumber(vertices8, sizeof(vertices8), indices8, sizeof(indices8), vao8, vbo8, ebo8);
+  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+  glEnableVertexAttribArray(numberPosAttrLoc);
 
-  GLuint vao4, vao5, vao6, vao8, vao9;
-  GLuint vbo4, vbo5, vbo6, vbo8, vbo9;
-  GLuint ebo4, ebo5, ebo6, ebo8, ebo9;
 
 
+  /*---------- NINE --------------*/
+  GLuint vao9, vbo9, ebo9;
+  createNumber(vertices9, sizeof(vertices9), indices9, sizeof(indices9), vao9, vbo9, ebo9);
+  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+  glEnableVertexAttribArray(numberPosAttrLoc);
+
+
+
+
+  NumberModel nm0 = NumberModel(vertices0, sizeof(vertices0), indices0, sizeof(indices0));
+  NumberModel nm1 = NumberModel(vertices1, sizeof(vertices1), indices1, sizeof(indices1));
+  NumberModel nm2 = NumberModel(vertices2, sizeof(vertices2), indices2, sizeof(indices2));
+  NumberModel nm3 = NumberModel(vertices3, sizeof(vertices3), indices3, sizeof(indices3));
+  NumberModel nm4 = NumberModel(vertices4, sizeof(vertices4), indices4, sizeof(indices4));
+  NumberModel nm5 = NumberModel(vertices5, sizeof(vertices5), indices5, sizeof(indices5));
+  NumberModel nm6 = NumberModel(vertices6, sizeof(vertices6), indices6, sizeof(indices6));
+  NumberModel nm7 = NumberModel(vertices7, sizeof(vertices7), indices7, sizeof(indices7));
+  NumberModel nm8 = NumberModel(vertices8, sizeof(vertices8), indices8, sizeof(indices8));
+  NumberModel nm9 = NumberModel(vertices9, sizeof(vertices9), indices9, sizeof(indices9));
+
+  // std::vector<NumberModel> numberModels = {};
+  // for (int i=0; i<9; i++) {
+  //   numberModels.push(NumberModel(vertices));
+  // }
 
 
 
@@ -356,6 +399,19 @@ int main() {
   glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
   glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+  NumberModel numberModels[] = {
+    NumberModel(vertices0, sizeof(vertices0), indices0, sizeof(indices0)),
+    NumberModel(vertices1, sizeof(vertices1), indices1, sizeof(indices1)),
+    NumberModel(vertices2, sizeof(vertices2), indices2, sizeof(indices2)),
+    NumberModel(vertices3, sizeof(vertices3), indices3, sizeof(indices3)),
+    NumberModel(vertices4, sizeof(vertices4), indices4, sizeof(indices4)),
+    NumberModel(vertices5, sizeof(vertices5), indices5, sizeof(indices5)),
+    NumberModel(vertices6, sizeof(vertices6), indices6, sizeof(indices6)),
+    NumberModel(vertices7, sizeof(vertices7), indices7, sizeof(indices7)),
+    NumberModel(vertices8, sizeof(vertices8), indices8, sizeof(indices8)),
+    NumberModel(vertices9, sizeof(vertices9), indices9, sizeof(indices9))
+  };
+
   int fps = 90; // todo: not that it matters, but setting this to 30 makes the game suuuuper sluggish, like more sluggish than 30fps should be.
   float secPerFrame = 1.0 / fps;
   float lastLoop = 0;
@@ -373,63 +429,7 @@ int main() {
     model = glm::mat4(1.0f);
     model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.0f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    switch (num) {
-      case 0:
-        glBindVertexArray(vao0);
-        glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
-        break;
-      case 1:
-        glBindVertexArray(vao1);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        break;
-      case 2:
-        glBindVertexArray(vao2);
-        glDrawElements(GL_TRIANGLES, 30, GL_UNSIGNED_INT, 0);
-        break;
-      case 3:
-        glBindVertexArray(vao3);
-        glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
-        break;
-      case 4:
-        glBindVertexArray(vao4);
-        glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
-        break;
-      case 5:
-        glBindVertexArray(vao5);
-        glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
-        break;
-      case 6:
-        glBindVertexArray(vao6);
-        glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
-        break;
-      case 7:
-        glBindVertexArray(vao7);
-        glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
-        break;
-      case 8:
-        glBindVertexArray(vao8);
-        glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
-        break;
-      case 9:
-        glBindVertexArray(vao9);
-        glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
-        break;
-    }
-    // if (num == 0) {
-    // }
-    // else if (num == 1) {
-    //   glBindVertexArray(oneVAO);
-    //   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    // }
-    // else if (num == 2) {
-    //   glBindVertexArray(twoVAO);
-    //   glDrawElements(GL_TRIANGLES, 30, GL_UNSIGNED_INT, 0);
-    // }
-    // else if (num == 7) {
-    //   glBindVertexArray(sevenVAO);
-    //   glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
-    // }
-    //
+    numberModels[num].draw();
 
     /* Draw player */
     glUseProgram(shaderProgram);

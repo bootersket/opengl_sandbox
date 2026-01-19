@@ -1,3 +1,4 @@
+
 #pragma once
 float vertices0[] = {
   -3.0f, 5.0f,
@@ -9,7 +10,6 @@ float vertices0[] = {
   1.0f, -2.0f,
   1.0f, 2.0f
 };
-
 unsigned int indices0[] = {
   0, 4, 3,
   0, 5, 4,
@@ -87,6 +87,84 @@ unsigned int indices3[] = {
   7, 9, 10
 };
 
+float vertices4[] = {
+  -1.0f, 5.0f,
+  -3.0f, 5.0f,
+  -3.0f, -1.0f,
+  1.0f, -1.0f,
+  1.0f, -5.0f,
+  3.0f, -5.0f,
+  3.0f, 5.0f,
+  1.0f, 5.0f,
+  1.0f, 1.0f,
+  -1.0f, 1.0f,
+};
+unsigned int indices4[] = {
+  1, 2, 0,
+  0, 2, 9,
+  9, 2, 3,
+  9, 3, 8,
+  3, 4, 5,
+  6, 3, 5,
+  6, 8, 3,
+  7, 8, 6
+};
+
+float vertices5[] = {
+  -3.0f, 5.0f,
+  -3.0f, -1.0f,
+  1.0f, -1.0f,
+  1.0f, -3.0f,
+  -3.0f, -3.0f,
+  -3.0f, -5.0f,
+  3.0f, -5.0f,
+  3.0f, 1.0f,
+  -1.0f, 1.0f,
+  -1.0f, 3.0f,
+  3.0f, 3.0f,
+  3.0f, 5.0f
+};
+unsigned int indices5[] = {
+  11, 9, 10,
+  0, 9, 11,
+  0, 1, 9,
+  9, 1, 8,
+  8, 1, 2,
+  8, 2, 7,
+  7, 2, 6,
+  2, 3, 6,
+    3, 5, 6,
+  4, 5, 3
+};
+
+float vertices6[] = {
+  3.0f, 5.0f,
+  -3.0f, 5.0f,
+  -3.0f, -5.0f,
+  3.0f, -5.0f,
+  3.0f, 1.0f,
+  -1.0f, 1.0f,
+  -1.0f, 3.0f,
+  3.0f, 3.0f,
+  -1.0f, -1.0f,
+  -1.0f, -3.0f,
+  1.0f, -3.0f,
+  1.0f, -1.0f,
+};
+unsigned int indices6[] = {
+  0, 6, 7,
+  1, 6, 0,
+  1, 2, 6,
+  6, 2, 5,
+  5, 2, 9,
+  9, 2, 10,
+  10, 2, 3,
+  11, 10, 3,
+  4, 11, 3,
+  4, 8, 11,
+  5, 8, 4
+};
+
 float vertices7[] = {
   -3.0f, 5.0f,
   3.0f, 5.0f,
@@ -96,11 +174,122 @@ float vertices7[] = {
   1.0f, 3.0f,
   -3.0f, 3.0f
 };
-
-
 unsigned int indices7[] = {
   0, 6, 1,
   1, 6, 2,
   2, 5, 3,
   5, 4, 3
 };
+
+float vertices8[] = {
+  3.0f, 5.0f,
+  -3.0f, 5.0f,
+  -3.0f, -5.0f,
+  3.0f, -5.0f,
+  -1.0f, 3.0f,
+  -1.0f, 1.0f,
+  1.0f, 1.0f,
+  1.0f, 3.0f,
+  -1.0f, -1.0f,
+  -1.0f, -3.0f,
+  1.0f, -3.0f,
+  1.0f, -1.0f
+};
+unsigned int indices8[] = {
+  1, 4, 0,
+  1, 5, 4,
+  1, 2, 5,
+  5, 2, 9,
+  9, 2, 3,
+  9, 3, 10,
+  6, 10, 3,
+  0, 6, 3,
+  0, 7, 6,
+  0, 4, 7,
+  5, 8, 11,
+  5, 11, 6
+};
+
+float vertices9[] = {
+  -3.0f, 5.0f,
+  -3.0f, -1.0f,
+  1.0f, -1.0f,
+  1.0f, -5.0f,
+  3.0f, -5.0f,
+  3.0f, 5.0f,
+  -1.0f, 3.0f,
+  -1.0f, 1.0f,
+  1.0f, 1.0f,
+  1.0f, 3.0f
+};
+unsigned int indices9[] = {
+  0, 6, 5,
+  0, 1, 6,
+  6, 1, 7,
+  7, 1, 8,
+  8, 1, 2,
+  9, 3, 4,
+  5, 9, 4,
+  5, 6, 9
+};
+
+float* allVertices[] = {
+  vertices1,
+  vertices2,
+  vertices3,
+  vertices4,
+  vertices5,
+  vertices6,
+  vertices7,
+  vertices8,
+  vertices9
+};
+
+unsigned int* allIndices[] = {
+  indices1,
+  indices2,
+  indices3,
+  indices4,
+  indices5,
+  indices6,
+  indices7,
+  indices8,
+  indices9
+};
+
+
+
+class NumberModel {
+  public:
+    NumberModel(float vertices[], int verticesSize, unsigned int indices[], int indicesSize) {
+      glGenVertexArrays(1, &vao);
+      glBindVertexArray(vao);
+
+      glGenBuffers(1, &vbo);
+      glBindBuffer(GL_ARRAY_BUFFER, vbo);
+      glBufferData(GL_ARRAY_BUFFER, verticesSize, vertices, GL_STATIC_DRAW);
+
+      glGenBuffers(1, &ebo);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+      glBufferData(GL_ELEMENT_ARRAY_BUFFER, indicesSize, indices, GL_STATIC_DRAW);
+
+      glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+      glEnableVertexAttribArray(0);
+
+      numElements = indicesSize / sizeof(indices[0]);
+      std::cout << "constructor" << std::endl;
+    }
+    void draw() {
+      glBindVertexArray(vao);
+      glDrawElements(GL_TRIANGLES, numElements, GL_UNSIGNED_INT, 0);
+    }
+    GLuint getVAO() {
+      return vao;
+    }
+  private:
+    GLuint vao, vbo, ebo;
+    unsigned int numElements;
+};
+
+
+
