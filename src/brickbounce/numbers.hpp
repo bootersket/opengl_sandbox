@@ -1,5 +1,6 @@
 
 #pragma once
+#include <vector>
 float vertices0[] = {
   -3.0f, 5.0f,
   -3.0f, -5.0f,
@@ -311,7 +312,6 @@ class NumberModel {
       glEnableVertexAttribArray(0);
 
       numElements = indicesSize / sizeof(indices[0]);
-      std::cout << "constructor" << std::endl;
     }
     void draw() {
       glBindVertexArray(vao);
@@ -325,4 +325,21 @@ class NumberModel {
     unsigned int numElements;
 };
 
+
+class FPSDisplay {
+  public:
+    FPSDisplay() {
+      init();
+    }
+    void init() {
+      for (int i=0; i<10; i++) {
+        numberModels.push_back(NumberModel(i));
+      }
+    }
+    void update(int fps) {
+      numberModels[0].draw();
+    }
+  private:
+    std::vector<NumberModel> numberModels;
+};
 

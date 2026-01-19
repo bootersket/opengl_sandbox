@@ -9,6 +9,7 @@
 
 #include "numbers.hpp"
 
+
 #define MOVE_SPEED_X 5.0f
 float xPos = 0.0f;
 float deltaTime = 0.0f;
@@ -74,6 +75,7 @@ void processKeyInput(GLFWwindow* window) {
 
   updatePos();
   updateNum();
+
 }
 
 void createNumber(float vertices[], int verticesSize, unsigned int indices[], int indicesSize, GLuint &vao, GLuint &vbo, GLuint &ebo) {
@@ -305,6 +307,8 @@ int main() {
   float secPerFrame = 1.0 / fps;
   float lastLoop = 0;
   float lastFrame = 0;
+
+  FPSDisplay fpsDisplay;
   while (!glfwWindowShouldClose(window)) {
 
     glfwPollEvents();
@@ -317,7 +321,8 @@ int main() {
     // model = glm::translate(glm::mat4(1.0f), glm::vec3(xPos, 0.0f, 0.0f));
     model = glm::mat4(1.0f);
     model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.0f));
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniformMatrix4fv(numberModelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniform3f(colorUniformLoc, 1.0f, 0.1f, 0.1f);
     numberModels[num].draw();
 
     /* Draw player */
@@ -329,6 +334,20 @@ int main() {
     glBindVertexArray(playerVAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+    /* Update FPS display */
+    glUseProgram(numberShaderProgram);
+    model = glm::mat4(1.0f);
+    // todo is z scale needed?
+    model = glm::translate(model, glm::vec3(-2.0f, 1.1f, 0.0f));
+    model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.0f));
+    glUniformMatrix4fv(numberModelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniform3f(colorUniformLoc, 0.0f, 1.1f, 0.1f);
+    fpsDisplay.update(2);
+
+
+WILO: got a number scaled and translated for the FPSDisplay in the
+        upper corner. Now make it so it can be different numbers
+        and double digit numbers. then move the logic to the class
 
 
 
