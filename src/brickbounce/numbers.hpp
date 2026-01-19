@@ -234,6 +234,7 @@ unsigned int indices9[] = {
 };
 
 float* allVertices[] = {
+  vertices0,
   vertices1,
   vertices2,
   vertices3,
@@ -245,7 +246,21 @@ float* allVertices[] = {
   vertices9
 };
 
+std::size_t allVerticesSizes[] = {
+  sizeof(vertices0),
+  sizeof(vertices1),
+  sizeof(vertices2),
+  sizeof(vertices3),
+  sizeof(vertices4),
+  sizeof(vertices5),
+  sizeof(vertices6),
+  sizeof(vertices7),
+  sizeof(vertices8),
+  sizeof(vertices9)
+};
+
 unsigned int* allIndices[] = {
+  indices0,
   indices1,
   indices2,
   indices3,
@@ -256,11 +271,30 @@ unsigned int* allIndices[] = {
   indices8,
   indices9
 };
+std::size_t allIndicesSizes[] = {
+  sizeof(indices0),
+  sizeof(indices1),
+  sizeof(indices2),
+  sizeof(indices3),
+  sizeof(indices4),
+  sizeof(indices5),
+  sizeof(indices6),
+  sizeof(indices7),
+  sizeof(indices8),
+  sizeof(indices9)
+};
 
 
 
 class NumberModel {
   public:
+    NumberModel(int num) {
+      float* vertices = allVertices[num];
+      size_t verticesSize = allVerticesSizes[num];
+      unsigned int* indices = allIndices[num];
+      size_t indicesSize = allIndicesSizes[num];
+      *this = NumberModel(vertices, verticesSize, indices, indicesSize);
+    }
     NumberModel(float vertices[], int verticesSize, unsigned int indices[], int indicesSize) {
       glGenVertexArrays(1, &vao);
       glBindVertexArray(vao);
@@ -290,6 +324,5 @@ class NumberModel {
     GLuint vao, vbo, ebo;
     unsigned int numElements;
 };
-
 
 

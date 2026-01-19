@@ -254,118 +254,6 @@ int main() {
   glVertexAttribPointer(colorAttrLoc, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(2*sizeof(float)));
   glEnableVertexAttribArray(colorAttrLoc);
 
-  // float sevenVertices[] = {
-  //   -3.0f, 5.0f, 1.0f, 0.0f, 0.0f,
-  //   3.0f, 5.0f, 1.0f, 0.0f, 0.0f,
-  //   3.0f, 3.0f, 1.0f, 0.0f, 0.0f,
-  //   3.0f, -5.0f, 1.0f, 0.0f, 0.0f,
-  //   1.0f, -5.0f, 1.0f, 0.0f, 0.0f,
-  //   1.0f, 3.0f, 1.0f, 0.0f, 0.0f,
-  //   -3.0f, 3.0f, 1.0f, 0.0f, 0.0f
-  // };
-  //
-  //
-  // unsigned int sevenIndices[] = {
-  //   0, 6, 1,
-  //   1, 6, 2,
-  //   2, 5, 3,
-  //   5, 4, 3
-  // };
-
-
-  // next steps:
-  // * create a class to represent number models
-  // * create array/vector of number model stuff
-  // * add rest of the number models
-  // * fix zero model
-  //
-
-
-
-  /*---------- ZERO --------------*/
-  GLuint vao0, vbo0, ebo0;
-  createNumber(vertices0, sizeof(vertices0), indices0, sizeof(indices0), vao0, vbo0, ebo0);
-  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
-  glEnableVertexAttribArray(numberPosAttrLoc);
-
-
-  /*---------- ONE --------------*/
-  GLuint vao1, vbo1, ebo1;
-  createNumber(vertices1, sizeof(vertices1), indices1, sizeof(indices1), vao1, vbo1, ebo1);
-  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
-  glEnableVertexAttribArray(numberPosAttrLoc);
-
-  /*---------- TWO --------------*/
-  GLuint vao2, vbo2, ebo2;
-  createNumber(vertices2, sizeof(vertices2), indices2, sizeof(indices2), vao2, vbo2, ebo2);
-  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
-  glEnableVertexAttribArray(numberPosAttrLoc);
-
-  /*---------- THREE --------------*/
-  GLuint vao3, vbo3, ebo3;
-  createNumber(vertices3, sizeof(vertices3), indices3, sizeof(indices3), vao3, vbo3, ebo3);
-  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
-  glEnableVertexAttribArray(numberPosAttrLoc);
-
-  /*---------- FOUR --------------*/
-  GLuint vao4, vbo4, ebo4;
-  createNumber(vertices4, sizeof(vertices4), indices4, sizeof(indices4), vao4, vbo4, ebo4);
-  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
-  glEnableVertexAttribArray(numberPosAttrLoc);
-
-  /*---------- FIVE --------------*/
-  GLuint vao5, vbo5, ebo5;
-  createNumber(vertices5, sizeof(vertices5), indices5, sizeof(indices5), vao5, vbo5, ebo5);
-  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
-  glEnableVertexAttribArray(numberPosAttrLoc);
-
-  /*---------- SIX --------------*/
-  GLuint vao6, vbo6, ebo6;
-  createNumber(vertices6, sizeof(vertices6), indices6, sizeof(indices6), vao6, vbo6, ebo6);
-  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
-  glEnableVertexAttribArray(numberPosAttrLoc);
-
-  // /*---------- SEVEN --------------*/
-  GLuint vao7, vbo7, ebo7;
-  createNumber(vertices7, sizeof(vertices7), indices7, sizeof(indices7), vao7, vbo7, ebo7);
-  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
-  glEnableVertexAttribArray(numberPosAttrLoc);
-
-  /*---------- SEVEN --------------*/
-  GLuint vao8, vbo8, ebo8;
-  createNumber(vertices8, sizeof(vertices8), indices8, sizeof(indices8), vao8, vbo8, ebo8);
-  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
-  glEnableVertexAttribArray(numberPosAttrLoc);
-
-
-
-  /*---------- NINE --------------*/
-  GLuint vao9, vbo9, ebo9;
-  createNumber(vertices9, sizeof(vertices9), indices9, sizeof(indices9), vao9, vbo9, ebo9);
-  glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
-  glEnableVertexAttribArray(numberPosAttrLoc);
-
-
-
-
-  NumberModel nm0 = NumberModel(vertices0, sizeof(vertices0), indices0, sizeof(indices0));
-  NumberModel nm1 = NumberModel(vertices1, sizeof(vertices1), indices1, sizeof(indices1));
-  NumberModel nm2 = NumberModel(vertices2, sizeof(vertices2), indices2, sizeof(indices2));
-  NumberModel nm3 = NumberModel(vertices3, sizeof(vertices3), indices3, sizeof(indices3));
-  NumberModel nm4 = NumberModel(vertices4, sizeof(vertices4), indices4, sizeof(indices4));
-  NumberModel nm5 = NumberModel(vertices5, sizeof(vertices5), indices5, sizeof(indices5));
-  NumberModel nm6 = NumberModel(vertices6, sizeof(vertices6), indices6, sizeof(indices6));
-  NumberModel nm7 = NumberModel(vertices7, sizeof(vertices7), indices7, sizeof(indices7));
-  NumberModel nm8 = NumberModel(vertices8, sizeof(vertices8), indices8, sizeof(indices8));
-  NumberModel nm9 = NumberModel(vertices9, sizeof(vertices9), indices9, sizeof(indices9));
-
-  // std::vector<NumberModel> numberModels = {};
-  // for (int i=0; i<9; i++) {
-  //   numberModels.push(NumberModel(vertices));
-  // }
-
-
-
 
 
   glm::mat4 model = glm::mat4(1.0f);
@@ -399,17 +287,18 @@ int main() {
   glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
   glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+  /* Create number models */
   NumberModel numberModels[] = {
-    NumberModel(vertices0, sizeof(vertices0), indices0, sizeof(indices0)),
-    NumberModel(vertices1, sizeof(vertices1), indices1, sizeof(indices1)),
-    NumberModel(vertices2, sizeof(vertices2), indices2, sizeof(indices2)),
-    NumberModel(vertices3, sizeof(vertices3), indices3, sizeof(indices3)),
-    NumberModel(vertices4, sizeof(vertices4), indices4, sizeof(indices4)),
-    NumberModel(vertices5, sizeof(vertices5), indices5, sizeof(indices5)),
-    NumberModel(vertices6, sizeof(vertices6), indices6, sizeof(indices6)),
-    NumberModel(vertices7, sizeof(vertices7), indices7, sizeof(indices7)),
-    NumberModel(vertices8, sizeof(vertices8), indices8, sizeof(indices8)),
-    NumberModel(vertices9, sizeof(vertices9), indices9, sizeof(indices9))
+    NumberModel(0),
+    NumberModel(1),
+    NumberModel(2),
+    NumberModel(3),
+    NumberModel(4),
+    NumberModel(5),
+    NumberModel(6),
+    NumberModel(7),
+    NumberModel(8),
+    NumberModel(9),
   };
 
   int fps = 90; // todo: not that it matters, but setting this to 30 makes the game suuuuper sluggish, like more sluggish than 30fps should be.
