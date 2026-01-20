@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <vector>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -92,6 +93,77 @@ void createNumber(float vertices[], int verticesSize, unsigned int indices[], in
 
   // glVertexAttribPointer(numberPosAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
   // glEnableVertexAttribArray(numberPosAttrLoc);
+
+}
+
+
+#define DEG_TO_RAD(degrees) ((degrees) * M_PI / 180.0)
+GLuint createBall() {
+  int tick = 4; // todo rename to segments or some shit
+  // std::vector<float> vertices;
+  // for (int i=0; i<tick*4; i++) {
+  //   // vertices.push_back(0.0f);
+  //   // vertices.push_back(0.0f);
+  //
+  // }
+
+  std::vector<float> vertices;
+
+  float aX, aY;
+  float bX, bY;
+  for (int deg=0; deg<=345; deg += 15) {
+    std::cout << "deg=" << deg << std::endl;
+    aX = std::cos(DEG_TO_RAD(deg));
+    aY = std::sin(DEG_TO_RAD(deg));
+
+    bX = std::cos(DEG_TO_RAD(deg + 15));
+    bY = std::sin(DEG_TO_RAD(deg + 15));
+
+    std::cout << "a: (" << aX << ", " << aY << ")" << std::endl;
+    std::cout << "b: (" << bX << ", " << bY << ")" << std::endl;
+    std::cout << std::endl;
+
+    vertices.push_back(0.0f);
+    vertices.push_back(0.0f);
+
+    vertices.push_back(aX);
+    vertices.push_back(aY);
+
+    vertices.push_back(bX);
+    vertices.push_back(bY);
+
+  }
+
+  // std::vector<float> vertices = {
+  //   0.0f, 0.0f,
+  //   1.0f, 0.0f,
+  //   0.0f, M_PI/2,
+  //
+  //   0.0f, 0.0f,
+  //   0.0f, M_PI/2,
+  //   -1.0f, 0.0f,
+  //
+  //   0.0f, 0.0f,
+  //   -1.0f, 0.0f,
+  //   0.0f, -M_PI/2,
+  //
+  //   0.0f, 0.0f,
+  //   // 0.0f, 3*M_PI/2,
+  //   0.0f, -M_PI/2,
+  //   1.0f, 0.0f
+  // };
+  
+  GLuint vao, vbo, ebo;
+  glGenVertexArrays(1, &vao);
+  glBindVertexArray(vao);
+
+  glGenBuffers(1, &vbo);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+  glEnableVertexAttribArray(0);
+
+  return vao;
 
 }
 
@@ -302,6 +374,7 @@ int main() {
     NumberModel(8),
     NumberModel(9),
   };
+  GLuint ballVAO = createBall();
 
   int fps = 90; // todo: not that it matters, but setting this to 30 makes the game suuuuper sluggish, like more sluggish than 30fps should be.
   float secPerFrame = 1.0 / fps;
@@ -318,12 +391,18 @@ int main() {
 
     /* Draw number/text */
     glUseProgram(numberShaderProgram);
+    glUniform3f(colorUniformLoc, 1.0f, 0.1f, 0.1f);
     // model = glm::translate(glm::mat4(1.0f), glm::vec3(xPos, 0.0f, 0.0f));
     model = glm::mat4(1.0f);
     model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.0f));
     glUniformMatrix4fv(numberModelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorUniformLoc, 1.0f, 0.1f, 0.1f);
     numberModels[num].draw();
+
+    /* Draw ball */
+    glUniform3f(colorUniformLoc, 0.0f, 1.0f, 0.5f);
+    glBindVertexArray(ballVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 72);
 
     /* Draw player */
     glUseProgram(shaderProgram);
