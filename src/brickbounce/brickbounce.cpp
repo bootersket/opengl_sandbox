@@ -424,9 +424,9 @@ int main() {
     fpsDisplay.update(2);
 
 
-WILO: got a number scaled and translated for the FPSDisplay in the
-        upper corner. Now make it so it can be different numbers
-        and double digit numbers. then move the logic to the class
+// WILO: got a number scaled and translated for the FPSDisplay in the
+//         upper corner. Now make it so it can be different numbers
+//         and double digit numbers. then move the logic to the class
 
 
 
