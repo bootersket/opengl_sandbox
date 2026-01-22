@@ -109,6 +109,9 @@ GLuint createBall() {
 
   std::vector<float> vertices;
 
+wilo: next steps: clean up circle drawing logic; variable for segments? BallObject class or something?
+        also: what is an "efficient" way to draw an object? I guess just have a draw func take an x and y
+        and then use those to apply some transformation to the object.
   float aX, aY;
   float bX, bY;
   for (int deg=0; deg<=345; deg += 15) {
@@ -134,24 +137,6 @@ GLuint createBall() {
 
   }
 
-  // std::vector<float> vertices = {
-  //   0.0f, 0.0f,
-  //   1.0f, 0.0f,
-  //   0.0f, M_PI/2,
-  //
-  //   0.0f, 0.0f,
-  //   0.0f, M_PI/2,
-  //   -1.0f, 0.0f,
-  //
-  //   0.0f, 0.0f,
-  //   -1.0f, 0.0f,
-  //   0.0f, -M_PI/2,
-  //
-  //   0.0f, 0.0f,
-  //   // 0.0f, 3*M_PI/2,
-  //   0.0f, -M_PI/2,
-  //   1.0f, 0.0f
-  // };
   
   GLuint vao, vbo, ebo;
   glGenVertexArrays(1, &vao);
@@ -164,6 +149,7 @@ GLuint createBall() {
   glEnableVertexAttribArray(0);
 
   return vao;
+
 
 }
 
@@ -444,6 +430,29 @@ int main() {
   cleanup(window);
   return 0;
 }
+
+/*
+ * Something to think about with C++ classes:
+
+Q: any reason to put the methods outside of the class definition?
+
+
+A:
+Mainly code organization and compilation speed.
+
+Readability / separation of interface vs implementation
+
+Inside the class: good for tiny methods (e.g., getters, setters) or simple one-liners.
+
+Outside the class: keeps the class definition clean, especially if draw() or constructors are long.
+
+Compilation dependencies
+
+Putting definitions in a .cpp file reduces header inclusion bloat. If you change the implementation, other files including the header don’t always need to recompile.
+
+Inlining control
+
+Methods defined inside the class are implicitly inline. Sometimes you don’t want that for bigger functions because it can increase compile time or binary size.*/
 
 /*
 WILO: got the one and two show up!! code is pretty gross, but just working on making it work for now. Next steps:
