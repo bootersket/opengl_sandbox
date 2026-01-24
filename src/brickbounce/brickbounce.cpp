@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -12,9 +13,13 @@
 
 
 #define MOVE_SPEED_X 5.0f
-float xPos = 0.0f;
+float playerXPos = 0.0f;
 float deltaTime = 0.0f;
 int num = 0;
+int fpsValue = 0;
+float ballXPos = 0.0f;
+float ballYPos = 0.0f;
+
 
 bool keyStates[500]; // GLFW keys are 32 - 348
 
@@ -35,13 +40,45 @@ void updateKeyState(GLFWwindow* window, int key) {
   }
 }
 
-void updatePos() {
+void updatePlayerPos() {
   // todo change this check to a func/macro called like keyPressed?
-  if (keyStates[GLFW_KEY_D]) xPos += MOVE_SPEED_X * deltaTime;
-  if (keyStates[GLFW_KEY_A]) xPos -= MOVE_SPEED_X * deltaTime;
-  xPos = std::min(2.1f, xPos);
-  xPos = std::max(-2.1f, xPos);
+  if (keyStates[GLFW_KEY_D]) playerXPos += MOVE_SPEED_X * deltaTime;
+  if (keyStates[GLFW_KEY_A]) playerXPos -= MOVE_SPEED_X * deltaTime;
+  playerXPos = std::min(2.1f, playerXPos);
+  playerXPos = std::max(-2.1f, playerXPos);
+}
 
+int ballXDir = 1;
+int ballYDir = 1;
+float ballSpeed = 1.5f;
+void updateBallPos() {
+  // wilo: doing some tinkering. added logic to manually move the ball to more clearly see how it's interacting with the screen boundaries.
+  // or rather than screen boundaries, the hard coded value. Want to implement logic to not make it hard coded
+  std::cout << "ballYPos: " << ballYPos << std::endl;
+  if (keyStates[GLFW_KEY_DOWN] && ballYPos > -1.1f) {
+    ballYPos -= ballSpeed * deltaTime;
+  }
+  if (keyStates[GLFW_KEY_UP] && ballYPos < 1.1f) {
+    ballYPos += ballSpeed * deltaTime;
+  }
+  if (keyStates[GLFW_KEY_RIGHT] && ballXPos < 1.1f) {
+    ballXPos += ballSpeed * deltaTime;
+  }
+  if (keyStates[GLFW_KEY_LEFT] && ballXPos > -1.1f) {
+    ballXPos -= ballSpeed * deltaTime;
+  }
+
+
+
+  /* This code makes the ball bounce around without user input */
+  // ballXPos += ballSpeed * deltaTime * ballXDir;
+  // todo do some slick math here to calculate exact collisions
+  // if (ballXPos > 2.1f) ballXDir = -1;
+  // if (ballXPos < -2.1f) ballXDir = 1;
+  //
+  // // ballYPos += ballSpeed * deltaTime * ballYDir;
+  // if (ballYPos > 1.1f) ballYDir = -1;
+  // if (ballYPos < -1.1f) ballYDir = 1;
 }
 
 void updateNum() {
@@ -73,8 +110,12 @@ void processKeyInput(GLFWwindow* window) {
   updateKeyState(window, GLFW_KEY_7);
   updateKeyState(window, GLFW_KEY_8);
   updateKeyState(window, GLFW_KEY_9);
+  updateKeyState(window, GLFW_KEY_LEFT);
+  updateKeyState(window, GLFW_KEY_RIGHT);
+  updateKeyState(window, GLFW_KEY_UP);
+  updateKeyState(window, GLFW_KEY_DOWN);
 
-  updatePos();
+  updatePlayerPos();
   updateNum();
 
 }
@@ -98,33 +139,21 @@ void createNumber(float vertices[], int verticesSize, unsigned int indices[], in
 
 
 #define DEG_TO_RAD(degrees) ((degrees) * M_PI / 180.0)
-GLuint createBall() {
-  int tick = 4; // todo rename to segments or some shit
-  // std::vector<float> vertices;
-  // for (int i=0; i<tick*4; i++) {
-  //   // vertices.push_back(0.0f);
-  //   // vertices.push_back(0.0f);
-  //
-  // }
+GLuint createBall(int segments) {
 
   std::vector<float> vertices;
 
-wilo: next steps: clean up circle drawing logic; variable for segments? BallObject class or something?
-        also: what is an "efficient" way to draw an object? I guess just have a draw func take an x and y
-        and then use those to apply some transformation to the object.
   float aX, aY;
   float bX, bY;
-  for (int deg=0; deg<=345; deg += 15) {
-    std::cout << "deg=" << deg << std::endl;
+
+  /* Calculate vertices */
+  int degreeDelta = 360/segments;
+  for (int deg=0; deg<=360; deg += degreeDelta) {
     aX = std::cos(DEG_TO_RAD(deg));
     aY = std::sin(DEG_TO_RAD(deg));
 
-    bX = std::cos(DEG_TO_RAD(deg + 15));
-    bY = std::sin(DEG_TO_RAD(deg + 15));
-
-    std::cout << "a: (" << aX << ", " << aY << ")" << std::endl;
-    std::cout << "b: (" << bX << ", " << bY << ")" << std::endl;
-    std::cout << std::endl;
+    bX = std::cos(DEG_TO_RAD(deg + degreeDelta));
+    bY = std::sin(DEG_TO_RAD(deg + degreeDelta));
 
     vertices.push_back(0.0f);
     vertices.push_back(0.0f);
@@ -138,7 +167,8 @@ wilo: next steps: clean up circle drawing logic; variable for segments? BallObje
   }
 
   
-  GLuint vao, vbo, ebo;
+  /* Setup vao and vbo */
+  GLuint vao, vbo;
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
 
@@ -149,8 +179,20 @@ wilo: next steps: clean up circle drawing logic; variable for segments? BallObje
   glEnableVertexAttribArray(0);
 
   return vao;
+}
 
+std::vector<int> getDigits(int num) {
+  /* Returns a vector of digits from num.
+   * eg. 123 -> {1, 2, 3}
+   * */
+  std::vector<int> digits;
+  while (num) {
+    digits.push_back(num % 10);
+    num /= 10;
+  }
+  std::reverse(digits.begin(), digits.end());
 
+  return digits;
 }
 
 void cleanup(GLFWwindow* window) {
@@ -270,8 +312,9 @@ GLuint createShaderProgram(std::string shaderName) {
 }
 
 int main() {
-  float ASPECT_RATIO = 16.0/9.0;
-  const int WINDOW_WIDTH = 800;
+  // float ASPECT_RATIO = 16.0/9.0;
+  float ASPECT_RATIO = 21.0/9.0;
+  const int WINDOW_WIDTH = 1200;
   const int WINDOW_HEIGHT = WINDOW_WIDTH / ASPECT_RATIO;
 
   GLFWwindow* window = createWindow(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -360,14 +403,24 @@ int main() {
     NumberModel(8),
     NumberModel(9),
   };
-  GLuint ballVAO = createBall();
 
-  int fps = 90; // todo: not that it matters, but setting this to 30 makes the game suuuuper sluggish, like more sluggish than 30fps should be.
+
+
+  /* Create ball */
+  int ballSegments = 24;
+  GLuint ballVAO = createBall(ballSegments);
+
+  int fps = 160; // todo: not that it matters, but setting this to 30 makes the game suuuuper sluggish, like more sluggish than 30fps should be.
   float secPerFrame = 1.0 / fps;
   float lastLoop = 0;
   float lastFrame = 0;
 
   FPSDisplay fpsDisplay;
+  int framesCount = 0;
+  float prevFPSUpdate = glfwGetTime();
+
+  glfwSwapInterval(0); // disable vsync
+
   while (!glfwWindowShouldClose(window)) {
 
     glfwPollEvents();
@@ -375,24 +428,28 @@ int main() {
     glClearColor(0.0f, 0.6f, 0.2f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    /* Draw number/text */
-    glUseProgram(numberShaderProgram);
-    glUniform3f(colorUniformLoc, 1.0f, 0.1f, 0.1f);
-    // model = glm::translate(glm::mat4(1.0f), glm::vec3(xPos, 0.0f, 0.0f));
-    model = glm::mat4(1.0f);
-    model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.0f));
-    glUniformMatrix4fv(numberModelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniform3f(colorUniformLoc, 1.0f, 0.1f, 0.1f);
-    numberModels[num].draw();
+    // /* Draw number/text */
+    // glUseProgram(numberShaderProgram);
+    // glUniform3f(colorUniformLoc, 1.0f, 0.1f, 0.1f);
+    // // model = glm::translate(glm::mat4(1.0f), glm::vec3(xPos, 0.0f, 0.0f));
+    // model = glm::mat4(1.0f);
+    // model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.0f));
+    // glUniformMatrix4fv(numberModelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    // glUniform3f(colorUniformLoc, 1.0f, 0.1f, 0.1f);
+    // numberModels[num].draw();
 
     /* Draw ball */
-    glUniform3f(colorUniformLoc, 0.0f, 1.0f, 0.5f);
+    glUniform3f(colorUniformLoc, 0.0f, 0.0f, 0.0f);
+    float ballSize = 0.1f;
+    model = glm::translate(glm::mat4(1.0f), glm::vec3(ballXPos, ballYPos, 0.0f));
+    model = glm::scale(model, glm::vec3(ballSize, ballSize, 0.0f));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glBindVertexArray(ballVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 72);
+    glDrawArrays(GL_TRIANGLES, 0, ballSegments*3);
 
     /* Draw player */
     glUseProgram(shaderProgram);
-    model = glm::translate(glm::mat4(1.0f), glm::vec3(xPos, -1.0f, 0.0f));
+    model = glm::translate(glm::mat4(1.0f), glm::vec3(playerXPos, -1.0f, 0.0f));
     model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.0f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
@@ -400,36 +457,69 @@ int main() {
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     /* Update FPS display */
+    // glUseProgram(numberShaderProgram);
+    // model = glm::mat4(1.0f);
+    // model = glm::translate(model, glm::vec3(-2.0f, 1.1f, 0.0f));
+    // model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.0f));
+    // glUniformMatrix4fv(numberModelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    // glUniform3f(colorUniformLoc, 0.0f, 1.1f, 0.1f);
+    // fpsDisplay.update(2);
+
+
+    /* Update FPS display (without class) */
     glUseProgram(numberShaderProgram);
-    model = glm::mat4(1.0f);
-    // todo is z scale needed?
-    model = glm::translate(model, glm::vec3(-2.0f, 1.1f, 0.0f));
-    model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.0f));
-    glUniformMatrix4fv(numberModelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glUniform3f(colorUniformLoc, 0.0f, 1.1f, 0.1f);
-    fpsDisplay.update(2);
-
-
-// WILO: got a number scaled and translated for the FPSDisplay in the
-//         upper corner. Now make it so it can be different numbers
-//         and double digit numbers. then move the logic to the class
-
+    std::vector<int> digits = getDigits(fpsValue);
+    float x, y;
+    x = 0.125f;
+    for (int i=0; i<digits.size(); i++) {
+      model = glm::mat4(1.0f);
+      model = glm::translate(model, glm::vec3(-2.0f+x*i, 1.1f+y*i, 0.0f));
+      model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.0f));
+      glUniformMatrix4fv(numberModelLoc, 1, GL_FALSE, glm::value_ptr(model));
+      glUniform3f(colorUniformLoc, 0.6f, 0.0f, 0.6f);
+      numberModels[digits[i]].draw();
+    }
 
 
     processKeyInput(window);
+    updateBallPos();
+
+
+    /* Logic to display at the set FPS */
     double now = glfwGetTime();
     deltaTime = now - lastLoop;
     if ((now - lastFrame) >= secPerFrame) {
       glfwSwapBuffers(window);
       lastFrame = now;
+
+      framesCount++;
     }
     lastLoop = now;
+
+    // todo weird bug where sometimes the fps display will just be single digit
+    /* Keep track of actual FPS */
+    now = glfwGetTime();
+    if (now - prevFPSUpdate >= 1) {
+      std::cout << "fps: " << fpsValue << std::endl;
+      prevFPSUpdate = now;
+      fpsValue = framesCount;
+      framesCount = 0;
+    }
+
     
   }
 
   cleanup(window);
   return 0;
 }
+
+/*
+ *todo thoughts on restructuring classes & shit:
+ - have different types of classes:
+    - model/mesh -> has draw() command, but no knowledge of shaders, transforms, etc
+    - shader -> methods like use(), setMat4(), etc.
+    - renderable/Renderer -> rolls up a model, shader, etc.
+ * */
 
 /*
  * Something to think about with C++ classes:

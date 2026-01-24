@@ -317,12 +317,11 @@ class NumberModel {
       glBindVertexArray(vao);
       glDrawElements(GL_TRIANGLES, numElements, GL_UNSIGNED_INT, 0);
     }
-    GLuint getVAO() {
-      return vao;
-    }
   private:
     GLuint vao, vbo, ebo;
     unsigned int numElements;
+    GLuint shader;
+    
 };
 
 
