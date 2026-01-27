@@ -31,19 +31,12 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
   if (key == GLFW_KEY_Q) glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
 
-void updateKeyState(GLFWwindow* window, int key) {
-  if (glfwGetKey(window, key) == GLFW_PRESS) {
-    keyStates[key] = true;
-  }
-  else if (glfwGetKey(window, key) == GLFW_RELEASE) {
-    keyStates[key] = false;
-  }
-}
 
 void updatePlayerPos() {
   // todo change this check to a func/macro called like keyPressed?
   if (keyStates[GLFW_KEY_D]) playerXPos += MOVE_SPEED_X * deltaTime;
   if (keyStates[GLFW_KEY_A]) playerXPos -= MOVE_SPEED_X * deltaTime;
+  // todo get more robust way to keep player in bounds of screen
   playerXPos = std::min(2.1f, playerXPos);
   playerXPos = std::max(-2.1f, playerXPos);
 }
@@ -52,23 +45,23 @@ int ballXDir = 1;
 int ballYDir = 1;
 float ballSpeed = 1.5f;
 void updateBallPos() {
+  float maxX = 1.0f;
+  float maxY = 1.0f;
   // wilo: doing some tinkering. added logic to manually move the ball to more clearly see how it's interacting with the screen boundaries.
   // or rather than screen boundaries, the hard coded value. Want to implement logic to not make it hard coded
-  std::cout << "ballYPos: " << ballYPos << std::endl;
-  if (keyStates[GLFW_KEY_DOWN] && ballYPos > -1.1f) {
-    ballYPos -= ballSpeed * deltaTime;
-  }
-  if (keyStates[GLFW_KEY_UP] && ballYPos < 1.1f) {
-    ballYPos += ballSpeed * deltaTime;
-  }
-  if (keyStates[GLFW_KEY_RIGHT] && ballXPos < 1.1f) {
+  std::cout << "ball: (" << ballXPos << ", " << ballYPos << ")" << std::endl;
+  if (keyStates[GLFW_KEY_RIGHT] && ballXPos < maxX) {
     ballXPos += ballSpeed * deltaTime;
   }
-  if (keyStates[GLFW_KEY_LEFT] && ballXPos > -1.1f) {
+  if (keyStates[GLFW_KEY_LEFT] && ballXPos > -maxX) {
     ballXPos -= ballSpeed * deltaTime;
   }
-
-
+  if (keyStates[GLFW_KEY_DOWN] && ballYPos > -maxY) {
+    ballYPos -= ballSpeed * deltaTime;
+  }
+  if (keyStates[GLFW_KEY_UP] && ballYPos < maxY) {
+    ballYPos += ballSpeed * deltaTime;
+  }
 
   /* This code makes the ball bounce around without user input */
   // ballXPos += ballSpeed * deltaTime * ballXDir;
@@ -94,30 +87,23 @@ void updateNum() {
   if (keyStates[GLFW_KEY_9]) num = 9;
 }
 
-bool dDown = false;
+
+void updateKeyStates(GLFWwindow* window) {
+  /* Update data structure that keeps track of which keys are currently
+   * being pressed for all keys. Other gameplay functions then check
+   * these key states to decide what actions should be performed
+   * eg. move player, etc. */
+  for (int key=0; key<sizeof(keyStates)/sizeof(keyStates[key]); key++) {
+    if (glfwGetKey(window, key) == GLFW_PRESS) keyStates[key] = true;
+    else if (glfwGetKey(window, key) == GLFW_RELEASE) keyStates[key] = false;
+  }
+}
+
 void processKeyInput(GLFWwindow* window) {
-  updateKeyState(window, GLFW_KEY_D);
-  updateKeyState(window, GLFW_KEY_A);
-  updateKeyState(window, GLFW_KEY_W);
-  updateKeyState(window, GLFW_KEY_S);
-  updateKeyState(window, GLFW_KEY_0);
-  updateKeyState(window, GLFW_KEY_1);
-  updateKeyState(window, GLFW_KEY_2);
-  updateKeyState(window, GLFW_KEY_3);
-  updateKeyState(window, GLFW_KEY_4);
-  updateKeyState(window, GLFW_KEY_5);
-  updateKeyState(window, GLFW_KEY_6);
-  updateKeyState(window, GLFW_KEY_7);
-  updateKeyState(window, GLFW_KEY_8);
-  updateKeyState(window, GLFW_KEY_9);
-  updateKeyState(window, GLFW_KEY_LEFT);
-  updateKeyState(window, GLFW_KEY_RIGHT);
-  updateKeyState(window, GLFW_KEY_UP);
-  updateKeyState(window, GLFW_KEY_DOWN);
+  updateKeyStates(window);
 
   updatePlayerPos();
   updateNum();
-
 }
 
 void createNumber(float vertices[], int verticesSize, unsigned int indices[], int indicesSize, GLuint &vao, GLuint &vbo, GLuint &ebo) {
@@ -312,6 +298,12 @@ GLuint createShaderProgram(std::string shaderName) {
 }
 
 int main() {
+// wilo:
+//   figure out how screen dimensions work to make more robust
+//     collision logic for the ball. kinda just using a hard coded values
+//     for it; also need to make some classes for shit to make the code
+//       a little nicer
+
   // float ASPECT_RATIO = 16.0/9.0;
   float ASPECT_RATIO = 21.0/9.0;
   const int WINDOW_WIDTH = 1200;
@@ -366,7 +358,14 @@ int main() {
   view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 
   glm::mat4 projection;
+wilo: trying to figure out how the ball/player positions relate
+        to the edges of the window. messing with ortho because apparently
+        that can make things simpler (i.e. no need to use perspective
+            with 2d) but when I try an ortho proj, nothing shows up
+        on the screen. Could be an issue with z values? not quite sure.
   projection = glm::perspective(glm::radians(45.0f), ASPECT_RATIO, 0.1f, 100.0f);
+  // projection = glm::ortho(-ASPECT_RATIO, ASPECT_RATIO, -1.0f, 1.0f);
+  // projection = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f);
   // todo try ortho?
 
   int modelLoc = glGetUniformLocation(shaderProgram, "model");
@@ -410,7 +409,7 @@ int main() {
   int ballSegments = 24;
   GLuint ballVAO = createBall(ballSegments);
 
-  int fps = 160; // todo: not that it matters, but setting this to 30 makes the game suuuuper sluggish, like more sluggish than 30fps should be.
+  int fps = 5000; // todo: not that it matters, but setting this to 30 makes the game suuuuper sluggish, like more sluggish than 30fps should be.
   float secPerFrame = 1.0 / fps;
   float lastLoop = 0;
   float lastFrame = 0;
@@ -421,6 +420,47 @@ int main() {
 
   glfwSwapInterval(0); // disable vsync
 
+
+  // Draw cross bars for tinkering
+  float crossThickness = 0.005f;
+  float width = 10.0f;
+  float height = 10.0f;
+  float crossVertices[] = {
+    // Vertical bar
+    crossThickness, height,
+    crossThickness, -height,
+    -crossThickness, -height,
+    -crossThickness, -height,
+    -crossThickness, height,
+    crossThickness, height,
+
+    // Horizontal bar
+    -width, crossThickness,
+    -width, -crossThickness,
+    width, -crossThickness,
+
+    -width, crossThickness,
+    width, crossThickness,
+    width, -crossThickness,
+  };
+
+  GLuint crossVAO, crossVBO;
+  glGenVertexArrays(1, &crossVAO);
+  glBindVertexArray(crossVAO);
+  glGenBuffers(1, &crossVBO);
+  glBindBuffer(GL_ARRAY_BUFFER, crossVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(crossVertices), crossVertices, GL_STATIC_DRAW);
+  // glUseProgram(shaderProgram);
+  glVertexAttribPointer(posAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+  glEnableVertexAttribArray(posAttrLoc);
+  // glVertexAttribPointer(colorAttrLoc);
+
+  
+
+
+  /*====================================
+   *            RENDER LOOP
+   * ==================================*/
   while (!glfwWindowShouldClose(window)) {
 
     glfwPollEvents();
@@ -440,7 +480,7 @@ int main() {
 
     /* Draw ball */
     glUniform3f(colorUniformLoc, 0.0f, 0.0f, 0.0f);
-    float ballSize = 0.1f;
+    float ballSize = 1.0f;
     model = glm::translate(glm::mat4(1.0f), glm::vec3(ballXPos, ballYPos, 0.0f));
     model = glm::scale(model, glm::vec3(ballSize, ballSize, 0.0f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
@@ -465,6 +505,14 @@ int main() {
     // glUniform3f(colorUniformLoc, 0.0f, 1.1f, 0.1f);
     // fpsDisplay.update(2);
 
+    /* Draw cross */
+    glUseProgram(shaderProgram);
+    model = glm::mat4(1.0f);
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glBindVertexArray(crossVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 12);
+
+
 
     /* Update FPS display (without class) */
     glUseProgram(numberShaderProgram);
@@ -479,6 +527,7 @@ int main() {
       glUniform3f(colorUniformLoc, 0.6f, 0.0f, 0.6f);
       numberModels[digits[i]].draw();
     }
+
 
 
     processKeyInput(window);
