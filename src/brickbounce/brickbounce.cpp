@@ -45,11 +45,11 @@ int ballXDir = 1;
 int ballYDir = 1;
 float ballSpeed = 1.5f;
 void updateBallPos() {
-  float maxX = 1.0f;
+  float maxX = 1.1f;
   float maxY = 1.0f;
   // wilo: doing some tinkering. added logic to manually move the ball to more clearly see how it's interacting with the screen boundaries.
   // or rather than screen boundaries, the hard coded value. Want to implement logic to not make it hard coded
-  std::cout << "ball: (" << ballXPos << ", " << ballYPos << ")" << std::endl;
+  // std::cout << "ball: (" << ballXPos << ", " << ballYPos << ")" << std::endl;
   if (keyStates[GLFW_KEY_RIGHT] && ballXPos < maxX) {
     ballXPos += ballSpeed * deltaTime;
   }
@@ -196,6 +196,9 @@ GLFWwindow* createWindow(int width, int height) {
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+  /* Hide window initially so user doesn't see it pop up before the
+   * window pos is set (below) */
+  glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
   GLFWwindow* window = glfwCreateWindow(width, height, "Brick Bounce", nullptr, nullptr);
   if (!window) {
@@ -204,6 +207,8 @@ GLFWwindow* createWindow(int width, int height) {
 
     return NULL;
   }
+  glfwSetWindowPos(window, 2000, 100);
+  glfwShowWindow(window);
 
   glfwMakeContextCurrent(window);
 
@@ -215,6 +220,7 @@ GLFWwindow* createWindow(int width, int height) {
 
   glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
   glfwSetKeyCallback(window, keyCallback);
+
 
   return window;
 }
@@ -297,6 +303,8 @@ GLuint createShaderProgram(std::string shaderName) {
   return program;
 }
 
+wilo: trying to figure out why ortho doesn't cause anything to be displayed.
+https://community.khronos.org/t/problem-with-orthographic-projection-2d/111760
 int main() {
 // wilo:
 //   figure out how screen dimensions work to make more robust
@@ -304,8 +312,8 @@ int main() {
 //     for it; also need to make some classes for shit to make the code
 //       a little nicer
 
-  // float ASPECT_RATIO = 16.0/9.0;
-  float ASPECT_RATIO = 21.0/9.0;
+  float ASPECT_RATIO = 16.0/9.0;
+  // float ASPECT_RATIO = 21.0/9.0;
   const int WINDOW_WIDTH = 1200;
   const int WINDOW_HEIGHT = WINDOW_WIDTH / ASPECT_RATIO;
 
@@ -355,17 +363,12 @@ int main() {
   // model = glm::rotate(model, glm::radians(13.0f), glm::vec3(1.0f, 0.0f, 1.0f));
 
   glm::mat4 view = glm::mat4(1.0f);
-  view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+  // view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 
   glm::mat4 projection;
-wilo: trying to figure out how the ball/player positions relate
-        to the edges of the window. messing with ortho because apparently
-        that can make things simpler (i.e. no need to use perspective
-            with 2d) but when I try an ortho proj, nothing shows up
-        on the screen. Could be an issue with z values? not quite sure.
-  projection = glm::perspective(glm::radians(45.0f), ASPECT_RATIO, 0.1f, 100.0f);
-  // projection = glm::ortho(-ASPECT_RATIO, ASPECT_RATIO, -1.0f, 1.0f);
-  // projection = glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f);
+  // projection = glm::perspective(glm::radians(45.0f), ASPECT_RATIO, 0.1f, 100.0f);
+  projection = glm::ortho(0.0f, (float)WINDOW_WIDTH, 0.0f, (float)WINDOW_HEIGHT, -10.0f, 10.0f);
+  // projection = glm::ortho(-ASPECT_RATIO, ASPECT_RATIO, .1f, 100.0f);
   // todo try ortho?
 
   int modelLoc = glGetUniformLocation(shaderProgram, "model");
@@ -480,7 +483,7 @@ wilo: trying to figure out how the ball/player positions relate
 
     /* Draw ball */
     glUniform3f(colorUniformLoc, 0.0f, 0.0f, 0.0f);
-    float ballSize = 1.0f;
+    float ballSize = 0.1f;
     model = glm::translate(glm::mat4(1.0f), glm::vec3(ballXPos, ballYPos, 0.0f));
     model = glm::scale(model, glm::vec3(ballSize, ballSize, 0.0f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));

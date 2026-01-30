@@ -13,8 +13,14 @@ run-main: main
 brick:
 	g++ src/brickbounce/brickbounce.cpp src/brickbounce/numbers.cpp $(GLAD_DIR)/glad.c -I$(THIRD_PARTY) -lglfw -ldl -o build/brickbounce
 
+sandbox:
+	g++ src/sandbox/sandbox.cpp $(GLAD_DIR)/glad.c -I$(THIRD_PARTY) -lglfw -ldl -o build/sandbox
+
 run-brick: brick
 	./build/brickbounce
+
+run-sandbox: sandbox
+	./build/sandbox
 
 clean:
 	rm -f build/main
