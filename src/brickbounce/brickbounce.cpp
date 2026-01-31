@@ -303,8 +303,8 @@ GLuint createShaderProgram(std::string shaderName) {
   return program;
 }
 
-wilo: trying to figure out why ortho doesn't cause anything to be displayed.
-https://community.khronos.org/t/problem-with-orthographic-projection-2d/111760
+// wilo: trying to figure out why ortho doesn't cause anything to be displayed.
+// https://community.khronos.org/t/problem-with-orthographic-projection-2d/111760
 int main() {
 // wilo:
 //   figure out how screen dimensions work to make more robust
@@ -363,7 +363,7 @@ int main() {
   // model = glm::rotate(model, glm::radians(13.0f), glm::vec3(1.0f, 0.0f, 1.0f));
 
   glm::mat4 view = glm::mat4(1.0f);
-  // view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+  view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 
   glm::mat4 projection;
   // projection = glm::perspective(glm::radians(45.0f), ASPECT_RATIO, 0.1f, 100.0f);

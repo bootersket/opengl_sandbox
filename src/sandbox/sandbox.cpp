@@ -1,4 +1,3 @@
-// what we can do is make a new program and make it as barebones as possible to figure out why ortho doesnt work
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -146,11 +145,29 @@ int main() {
   GLuint shaderProgram = createShaderProgram("shader");
   GLint posAttrLoc = glGetAttribLocation(shaderProgram, "aPos");
 
+// wilo: based on chatgpts response here: https://chatgpt.com/c/697c1ece-7ed0-8330-a729-78d12048330c
+// seems like it's an issue of the screen space between vertices & the
+// ortho projection. if I change the vertices as they are below, the rect
+// is at least partially visible, so thats progress. so keep looking into this,
+// potentially break out a notebook and pencil (and do the
+//     matrix math; also would help to figure out what an ortho
+//     proj matrix even *IS*), and dive into whats going on
+//   here. also posted on reddit about it.
+//   This would make an interesting video (dive into it and explain how it
+//       works at the end once you understand it.)
   float vertices[] = {
-    -0.5f, 0.1f,
-    -0.5f, -0.1f,
-    0.5f, -0.1f,
-    0.5f, 0.1f,
+    // -0.5f, 0.1f,
+    // -0.5f, -0.1f,
+    // 0.5f, -0.1f,
+    // 0.5f, 0.1f,
+    // -5.0f, 1.0f,
+    // -5.0f, -1.0f,
+    // 5.0f, -1.0f,
+    // 5.0f, 1.0f,
+    1.0f, 2.0f,
+    1.0f, 1.0f,
+    5.0f, 1.0f,
+    5.0f, 2.0f,
   };
 
   unsigned int indices[] = {
@@ -173,12 +190,26 @@ int main() {
   glVertexAttribPointer(posAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
   glEnableVertexAttribArray(posAttrLoc);
 
+wilo: got a better understanding of ortho (its literally setting the bounds
+          of the screen, so the vertices positions need to be within
+          those bounds to be visible. Or the model matrix needs to
+          transform the vertices such that the end result is in the bounds.)
+
+        What i don't get, is why the rect is slightly off center
+        or how it works really when the ortho bounds are bigger, as this
+        causes the drawn rect to be smaller (kinda makes sense but 
+            intuition is not 100% there.)
+
   glm::mat4 model = glm::mat4(1.0f);
+  model = glm::translate(glm::mat4(1.0f), glm::vec3(WINDOW_WIDTH/2, WINDOW_HEIGHT/2, 0.0f));
+  // float transX = 50.0f;
+  // float transY = 50.0f;
+  // model = glm::translate(glm::mat4(1.0f), glm::vec3(transX, transY, 0.0f));
+  model = glm::scale(model, glm::vec3(50.0f, 50.0f, 0.0f));
   glm::mat4 view = glm::mat4(1.0f);
   // glm::mat4 proj = glm::mat4(1.0f);
-wilo: now that we have a simple sandbox program, I can start digging into why 
-        this doesnt work.
-  glm::mat4 proj = glm::ortho(0.0f, 100.0f, 0.0f, 100.0f);
+  // glm::mat4 proj = glm::ortho(0.0f, 100.0f, 0.0f, 100.0f, -1.0f, 1.0f);
+  glm::mat4 proj = glm::ortho(0.0f, (float)WINDOW_WIDTH, 0.0f, (float)WINDOW_HEIGHT, -1.0f, 1.0f);
 
   int modelLoc = glGetUniformLocation(shaderProgram, "model");
   int viewLoc = glGetUniformLocation(shaderProgram, "view");
@@ -201,12 +232,6 @@ wilo: now that we have a simple sandbox program, I can start digging into why
     glUseProgram(shaderProgram);
     glBindVertexArray(vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    // model = glm::translate(glm::mat4(1.0f), glm::vec3(playerXPos, -1.0f, 0.0f));
-    // model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.0f));
-    // glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    //
-    // glBindVertexArray(playerVAO);
-    // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 
     glfwSwapBuffers(window);
