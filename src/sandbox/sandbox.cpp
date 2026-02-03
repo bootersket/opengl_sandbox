@@ -190,15 +190,6 @@ int main() {
   glVertexAttribPointer(posAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
   glEnableVertexAttribArray(posAttrLoc);
 
-wilo: got a better understanding of ortho (its literally setting the bounds
-          of the screen, so the vertices positions need to be within
-          those bounds to be visible. Or the model matrix needs to
-          transform the vertices such that the end result is in the bounds.)
-
-        What i don't get, is why the rect is slightly off center
-        or how it works really when the ortho bounds are bigger, as this
-        causes the drawn rect to be smaller (kinda makes sense but 
-            intuition is not 100% there.)
 
   glm::mat4 model = glm::mat4(1.0f);
   model = glm::translate(glm::mat4(1.0f), glm::vec3(WINDOW_WIDTH/2, WINDOW_HEIGHT/2, 0.0f));

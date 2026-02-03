@@ -12,13 +12,16 @@
 #include "numbers.hpp"
 
 
-#define MOVE_SPEED_X 5.0f
+#define MOVE_SPEED_X 50.0f
 float playerXPos = 0.0f;
 float deltaTime = 0.0f;
 int num = 0;
 int fpsValue = 0;
 float ballXPos = 0.0f;
 float ballYPos = 0.0f;
+
+float SCREEN_WIDTH = 100.0f;
+float SCREEN_HEIGHT = 100.0f;
 
 
 bool keyStates[500]; // GLFW keys are 32 - 348
@@ -37,8 +40,8 @@ void updatePlayerPos() {
   if (keyStates[GLFW_KEY_D]) playerXPos += MOVE_SPEED_X * deltaTime;
   if (keyStates[GLFW_KEY_A]) playerXPos -= MOVE_SPEED_X * deltaTime;
   // todo get more robust way to keep player in bounds of screen
-  playerXPos = std::min(2.1f, playerXPos);
-  playerXPos = std::max(-2.1f, playerXPos);
+  playerXPos = std::min(SCREEN_WIDTH/2, playerXPos);
+  playerXPos = std::max(-SCREEN_WIDTH/2, playerXPos);
 }
 
 int ballXDir = 1;
@@ -303,15 +306,7 @@ GLuint createShaderProgram(std::string shaderName) {
   return program;
 }
 
-// wilo: trying to figure out why ortho doesn't cause anything to be displayed.
-// https://community.khronos.org/t/problem-with-orthographic-projection-2d/111760
 int main() {
-// wilo:
-//   figure out how screen dimensions work to make more robust
-//     collision logic for the ball. kinda just using a hard coded values
-//     for it; also need to make some classes for shit to make the code
-//       a little nicer
-
   float ASPECT_RATIO = 16.0/9.0;
   // float ASPECT_RATIO = 21.0/9.0;
   const int WINDOW_WIDTH = 1200;
@@ -367,9 +362,10 @@ int main() {
 
   glm::mat4 projection;
   // projection = glm::perspective(glm::radians(45.0f), ASPECT_RATIO, 0.1f, 100.0f);
-  projection = glm::ortho(0.0f, (float)WINDOW_WIDTH, 0.0f, (float)WINDOW_HEIGHT, -10.0f, 10.0f);
-  // projection = glm::ortho(-ASPECT_RATIO, ASPECT_RATIO, .1f, 100.0f);
-  // todo try ortho?
+
+  float worldWidth = 100.0f;
+  float worldHeight = worldWidth / ASPECT_RATIO;
+  projection = glm::ortho(0.0f, worldWidth, 0.0f, worldHeight, -10.0f, 10.0f);
 
   int modelLoc = glGetUniformLocation(shaderProgram, "model");
   int viewLoc = glGetUniformLocation(shaderProgram, "view");
@@ -425,26 +421,32 @@ int main() {
 
 
   // Draw cross bars for tinkering
-  float crossThickness = 0.005f;
+  float crossThickness = 0.050f;
   float width = 10.0f;
   float height = 10.0f;
+WILO: Just added these but i dont know if they are correct; clearly not giving the desired effect.
+        what is the desired effect? both cross bars to be visually the same thickness.
+  float xThick = crossThickness / ASPECT_RATIO;
+  float yThick = crossThickness;
+  std::cout << "xThick: " << xThick << std::endl;
+  std::cout << "yThick: " << yThick << std::endl;
   float crossVertices[] = {
     // Vertical bar
-    crossThickness, height,
-    crossThickness, -height,
-    -crossThickness, -height,
-    -crossThickness, -height,
-    -crossThickness, height,
-    crossThickness, height,
+    yThick, worldHeight,
+    yThick, -worldHeight,
+    -yThick, -worldHeight,
+    -yThick, -worldHeight,
+    -yThick, worldHeight,
+    yThick, worldHeight,
 
     // Horizontal bar
-    -width, crossThickness,
-    -width, -crossThickness,
-    width, -crossThickness,
+    -worldWidth, xThick,
+    -worldWidth, -xThick,
+    worldWidth, -xThick,
 
-    -width, crossThickness,
-    width, crossThickness,
-    width, -crossThickness,
+    -worldWidth, xThick,
+    worldWidth, xThick,
+    worldWidth, -xThick,
   };
 
   GLuint crossVAO, crossVBO;
@@ -492,8 +494,9 @@ int main() {
 
     /* Draw player */
     glUseProgram(shaderProgram);
-    model = glm::translate(glm::mat4(1.0f), glm::vec3(playerXPos, -1.0f, 0.0f));
-    model = glm::scale(model, glm::vec3(0.2f, 0.2f, 0.0f));
+    float playerScale = 5.0f;
+    model = glm::translate(glm::mat4(1.0f), glm::vec3(worldWidth/2 + playerXPos, 10.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(playerScale));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
     glBindVertexArray(playerVAO);
@@ -510,7 +513,12 @@ int main() {
 
     /* Draw cross */
     glUseProgram(shaderProgram);
-    model = glm::mat4(1.0f);
+    // model = glm::mat4(1.0f);
+    model = glm::translate(glm::mat4(1.0f), glm::vec3(worldWidth/2, worldHeight/2, 0.0f));
+// WILO: thought I couldn't get the cross bar, but I can; just that the thickness was so low that it wasn't appearing for the vertical line.
+//         Now that they both appear, i can see one appears thicker than the other. Why? obviously has to do with the differening ratio of worldHeight
+//         and worldWidth. But dive into it more and get a better understanding.
+    // model = glm::translate(glm::mat4(1.0f), glm::vec3(50.0f, 23.0f, 0.0f));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glBindVertexArray(crossVAO);
     glDrawArrays(GL_TRIANGLES, 0, 12);
