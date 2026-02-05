@@ -14,14 +14,23 @@
 
 #define MOVE_SPEED_X 50.0f
 float playerXPos = 0.0f;
+float playerYPos = 10.0f;
 float deltaTime = 0.0f;
 int num = 0;
 int fpsValue = 0;
-float ballXPos = 0.0f;
-float ballYPos = 0.0f;
+
+float worldWidth;
+float worldHeight;
+#define WORLD_CENTER_X (worldWidth/2)
+#define WORLD_CENTER_Y (worldHeight/2)
+float BALL_RADIUS = 3.0f;
+float ballXPos = WORLD_CENTER_X;
+float ballYPos = WORLD_CENTER_Y;
+
 
 float SCREEN_WIDTH = 100.0f;
 float SCREEN_HEIGHT = 100.0f;
+
 
 
 bool keyStates[500]; // GLFW keys are 32 - 348
@@ -46,20 +55,21 @@ void updatePlayerPos() {
 
 int ballXDir = 1;
 int ballYDir = 1;
-float ballSpeed = 1.5f;
+float ballSpeed = 50.0f;
+#define BALL_BOTTOM_Y (ballYPos - BALL_RADIUS)
+#define BALL_TOP_Y (ballYPos + BALL_RADIUS)
 void updateBallPos() {
-  float maxX = 1.1f;
-  float maxY = 1.0f;
-  // wilo: doing some tinkering. added logic to manually move the ball to more clearly see how it's interacting with the screen boundaries.
-  // or rather than screen boundaries, the hard coded value. Want to implement logic to not make it hard coded
-  // std::cout << "ball: (" << ballXPos << ", " << ballYPos << ")" << std::endl;
+  float minX = 0 + BALL_RADIUS;
+  float maxX = worldWidth - BALL_RADIUS;
+  float minY = 0 + BALL_RADIUS;
+  float maxY = worldHeight - BALL_RADIUS;
   if (keyStates[GLFW_KEY_RIGHT] && ballXPos < maxX) {
     ballXPos += ballSpeed * deltaTime;
   }
-  if (keyStates[GLFW_KEY_LEFT] && ballXPos > -maxX) {
+  if (keyStates[GLFW_KEY_LEFT] && ballXPos > minX) {
     ballXPos -= ballSpeed * deltaTime;
   }
-  if (keyStates[GLFW_KEY_DOWN] && ballYPos > -maxY) {
+  if (keyStates[GLFW_KEY_DOWN] && ballYPos > minY) {
     ballYPos -= ballSpeed * deltaTime;
   }
   if (keyStates[GLFW_KEY_UP] && ballYPos < maxY) {
@@ -68,15 +78,26 @@ void updateBallPos() {
 
   /* This code makes the ball bounce around without user input */
   // ballXPos += ballSpeed * deltaTime * ballXDir;
-  // todo do some slick math here to calculate exact collisions
-  // if (ballXPos > 2.1f) ballXDir = -1;
-  // if (ballXPos < -2.1f) ballXDir = 1;
+  // ballYPos += ballSpeed * deltaTime * ballYDir;
+  // // todo do some slick math here to calculate exact collisions
+  // if (ballXPos > maxX) ballXDir = -1;
+  // if (ballXPos < -maxX) ballXDir = 1;
   //
   // // ballYPos += ballSpeed * deltaTime * ballYDir;
-  // if (ballYPos > 1.1f) ballYDir = -1;
-  // if (ballYPos < -1.1f) ballYDir = 1;
-}
+  // if (ballYPos > maxY) ballYDir = -1;
+  // if (ballYPos < -maxY) ballYDir = 1;
 
+  // Check for collision with player
+  // std::cout << "playerYPos: " << playerYPos << std::endl;
+  // std::cout << "ballXPos: " << ballXPos << std::endl;
+wilo: refactoring some ball stuff, added BALL_BOTTOM_Y, working on ball & player collision logic. need to implement the math
+        for the size of the player rect; is there currently a player width/height anywhere? That would be useful here so
+          that we can calculate if the ball is "within" the rect. Because we don't currently have that, the current collision logic
+            is a bit imprecise (i.e. collide not detected until the ball is a few pixels inside the rect)
+  if (BALL_BOTTOM_Y <= playerYPos) {
+    std::cout << "collide" << std::endl;
+  }
+}
 void updateNum() {
   if (keyStates[GLFW_KEY_0]) num = 0;
   if (keyStates[GLFW_KEY_1]) num = 1;
@@ -308,7 +329,6 @@ GLuint createShaderProgram(std::string shaderName) {
 
 int main() {
   float ASPECT_RATIO = 16.0/9.0;
-  // float ASPECT_RATIO = 21.0/9.0;
   const int WINDOW_WIDTH = 1200;
   const int WINDOW_HEIGHT = WINDOW_WIDTH / ASPECT_RATIO;
 
@@ -363,9 +383,11 @@ int main() {
   glm::mat4 projection;
   // projection = glm::perspective(glm::radians(45.0f), ASPECT_RATIO, 0.1f, 100.0f);
 
-  float worldWidth = 100.0f;
-  float worldHeight = worldWidth / ASPECT_RATIO;
+  worldWidth = 100.0f;
+  worldHeight = worldWidth / ASPECT_RATIO;
   projection = glm::ortho(0.0f, worldWidth, 0.0f, worldHeight, -10.0f, 10.0f);
+  std::cout << "worldWidth: " << worldWidth << std::endl;
+  std::cout << "worldHeight: " << worldHeight << std::endl;
 
   int modelLoc = glGetUniformLocation(shaderProgram, "model");
   int viewLoc = glGetUniformLocation(shaderProgram, "view");
@@ -421,32 +443,26 @@ int main() {
 
 
   // Draw cross bars for tinkering
-  float crossThickness = 0.050f;
+  float crossThickness = 0.100f;
   float width = 10.0f;
   float height = 10.0f;
-WILO: Just added these but i dont know if they are correct; clearly not giving the desired effect.
-        what is the desired effect? both cross bars to be visually the same thickness.
-  float xThick = crossThickness / ASPECT_RATIO;
-  float yThick = crossThickness;
-  std::cout << "xThick: " << xThick << std::endl;
-  std::cout << "yThick: " << yThick << std::endl;
   float crossVertices[] = {
     // Vertical bar
-    yThick, worldHeight,
-    yThick, -worldHeight,
-    -yThick, -worldHeight,
-    -yThick, -worldHeight,
-    -yThick, worldHeight,
-    yThick, worldHeight,
+    crossThickness, worldHeight,
+    crossThickness, -worldHeight,
+    -crossThickness, -worldHeight,
+    -crossThickness, -worldHeight,
+    -crossThickness, worldHeight,
+    crossThickness, worldHeight,
 
     // Horizontal bar
-    -worldWidth, xThick,
-    -worldWidth, -xThick,
-    worldWidth, -xThick,
+    -worldWidth, crossThickness,
+    -worldWidth, -crossThickness,
+    worldWidth, -crossThickness,
 
-    -worldWidth, xThick,
-    worldWidth, xThick,
-    worldWidth, -xThick,
+    -worldWidth, crossThickness,
+    worldWidth, crossThickness,
+    worldWidth, -crossThickness,
   };
 
   GLuint crossVAO, crossVBO;
@@ -466,6 +482,8 @@ WILO: Just added these but i dont know if they are correct; clearly not giving t
   /*====================================
    *            RENDER LOOP
    * ==================================*/
+  ballXPos = WORLD_CENTER_X;
+  ballYPos = WORLD_CENTER_Y;
   while (!glfwWindowShouldClose(window)) {
 
     glfwPollEvents();
@@ -485,9 +503,9 @@ WILO: Just added these but i dont know if they are correct; clearly not giving t
 
     /* Draw ball */
     glUniform3f(colorUniformLoc, 0.0f, 0.0f, 0.0f);
-    float ballSize = 0.1f;
+    // model = glm::translate(glm::mat4(1.0f), glm::vec3(WORLD_CENTER_X + ballXPos, WORLD_CENTER_Y + ballYPos, 0.0f));
     model = glm::translate(glm::mat4(1.0f), glm::vec3(ballXPos, ballYPos, 0.0f));
-    model = glm::scale(model, glm::vec3(ballSize, ballSize, 0.0f));
+    model = glm::scale(model, glm::vec3(BALL_RADIUS));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     glBindVertexArray(ballVAO);
     glDrawArrays(GL_TRIANGLES, 0, ballSegments*3);
@@ -495,7 +513,7 @@ WILO: Just added these but i dont know if they are correct; clearly not giving t
     /* Draw player */
     glUseProgram(shaderProgram);
     float playerScale = 5.0f;
-    model = glm::translate(glm::mat4(1.0f), glm::vec3(worldWidth/2 + playerXPos, 10.0f, 0.0f));
+    model = glm::translate(glm::mat4(1.0f), glm::vec3(WORLD_CENTER_X + playerXPos, playerYPos, 0.0f));
     model = glm::scale(model, glm::vec3(playerScale));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
@@ -514,7 +532,7 @@ WILO: Just added these but i dont know if they are correct; clearly not giving t
     /* Draw cross */
     glUseProgram(shaderProgram);
     // model = glm::mat4(1.0f);
-    model = glm::translate(glm::mat4(1.0f), glm::vec3(worldWidth/2, worldHeight/2, 0.0f));
+    model = glm::translate(glm::mat4(1.0f), glm::vec3(WORLD_CENTER_X, WORLD_CENTER_Y, 0.0f));
 // WILO: thought I couldn't get the cross bar, but I can; just that the thickness was so low that it wasn't appearing for the vertical line.
 //         Now that they both appear, i can see one appears thicker than the other. Why? obviously has to do with the differening ratio of worldHeight
 //         and worldWidth. But dive into it more and get a better understanding.
@@ -572,6 +590,9 @@ WILO: Just added these but i dont know if they are correct; clearly not giving t
   cleanup(window);
   return 0;
 }
+
+// wilo: just as a random technical challenge, implement some logic to "zoom in" to the point where the cursor is. (perhaps much more challenging than
+//           it seems)
 
 /*
  *todo thoughts on restructuring classes & shit:
