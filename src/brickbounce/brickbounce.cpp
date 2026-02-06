@@ -58,21 +58,23 @@ int ballYDir = 1;
 float ballSpeed = 50.0f;
 #define BALL_BOTTOM_Y (ballYPos - BALL_RADIUS)
 #define BALL_TOP_Y (ballYPos + BALL_RADIUS)
+#define BALL_RIGHT_X (ballXPos + BALL_RADIUS)
+#define BALL_LEFT_X (ballXPos - BALL_RADIUS)
 void updateBallPos() {
-  float minX = 0 + BALL_RADIUS;
-  float maxX = worldWidth - BALL_RADIUS;
-  float minY = 0 + BALL_RADIUS;
-  float maxY = worldHeight - BALL_RADIUS;
-  if (keyStates[GLFW_KEY_RIGHT] && ballXPos < maxX) {
+  float minX = 0;
+  float maxX = worldWidth;
+  float minY = 0;
+  float maxY = worldHeight;
+  if (keyStates[GLFW_KEY_RIGHT] && BALL_RIGHT_X < maxX) {
     ballXPos += ballSpeed * deltaTime;
   }
-  if (keyStates[GLFW_KEY_LEFT] && ballXPos > minX) {
+  if (keyStates[GLFW_KEY_LEFT] && BALL_LEFT_X > minX) {
     ballXPos -= ballSpeed * deltaTime;
   }
-  if (keyStates[GLFW_KEY_DOWN] && ballYPos > minY) {
+  if (keyStates[GLFW_KEY_DOWN] && BALL_BOTTOM_Y > minY) {
     ballYPos -= ballSpeed * deltaTime;
   }
-  if (keyStates[GLFW_KEY_UP] && ballYPos < maxY) {
+  if (keyStates[GLFW_KEY_UP] && BALL_TOP_Y < maxY) {
     ballYPos += ballSpeed * deltaTime;
   }
 
@@ -90,10 +92,14 @@ void updateBallPos() {
   // Check for collision with player
   // std::cout << "playerYPos: " << playerYPos << std::endl;
   // std::cout << "ballXPos: " << ballXPos << std::endl;
-wilo: refactoring some ball stuff, added BALL_BOTTOM_Y, working on ball & player collision logic. need to implement the math
-        for the size of the player rect; is there currently a player width/height anywhere? That would be useful here so
-          that we can calculate if the ball is "within" the rect. Because we don't currently have that, the current collision logic
-            is a bit imprecise (i.e. collide not detected until the ball is a few pixels inside the rect)
+// wilo: 2/4 refactoring some ball stuff, added BALL_BOTTOM_Y, working on ball & player collision logic. need to implement the math
+//         for the size of the player rect; is there currently a player width/height anywhere? That would be useful here so
+//           that we can calculate if the ball is "within" the rect. Because we don't currently have that, the current collision logic
+//             is a bit imprecise (i.e. collide not detected until the ball is a few pixels inside the rect)
+  // wilp 2/5: refactored such that we now define a width and height for the player; perhaps need to store these in globals so I can access them
+  // for collision logic tho, so keep working on that. 
+  // Last thing I did was remove color attrib from player logic (which involved removing it from the shaders, but this is a general purpose shader
+  // that the cross also uses so now it's green). Update the shader to take a color as a uniform and make the bars black but the player green.
   if (BALL_BOTTOM_Y <= playerYPos) {
     std::cout << "collide" << std::endl;
   }
@@ -337,17 +343,27 @@ int main() {
 
   GLuint shaderProgram = createShaderProgram("shader");
   GLint posAttrLoc = glGetAttribLocation(shaderProgram, "aPos");
-  GLint colorAttrLoc = glGetAttribLocation(shaderProgram, "aColor");
+  // GLint colorAttrLoc = glGetAttribLocation(shaderProgram, "aColor");
 
   GLuint numberShaderProgram = createShaderProgram("number");
   GLint numberPosAttrLoc = glGetAttribLocation(numberShaderProgram, "aPos");
 
+  // todo 2/5:
+  // remove color attribute from player vertex data. why is that even there? just use a uniform or something
+  float playerBaseWidth = 5.0f;
+  float playerBaseHeight = 1.0f;
   float playerVertices[] = {
-    -0.5f, 0.1f, 0.0f, 1.0f, 0.0f,
-    -0.5f, -0.1f, 0.0f, 1.0f, 0.0f,
-    0.5f, -0.1f, 0.0f, 1.0f, 0.0f,
-    0.5f, 0.1f, 0.0f, 1.0f, 0.0f
+    // 0.0f, playerBaseHeight,        0.0f, 1.0f, 0.0f,
+    // 0.0f, 0.0f,                0.0f, 1.0f, 0.0f,
+    // playerBaseWidth, 0.0f,         0.0f, 1.0f, 0.0f,
+    // playerBaseWidth, playerBaseHeight, 0.0f, 1.0f, 0.0f,
+
+    0.0f, playerBaseHeight,
+    0.0f, 0.0f,
+    playerBaseWidth, 0.0f,
+    playerBaseWidth, playerBaseHeight
   };
+
 
   unsigned int playerIndices[] = {
     0, 1, 2,
@@ -366,11 +382,11 @@ int main() {
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, playerEBO);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(playerIndices), playerIndices, GL_STATIC_DRAW);
 
-  glVertexAttribPointer(posAttrLoc, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)0);
+  glVertexAttribPointer(posAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
   glEnableVertexAttribArray(posAttrLoc);
 
-  glVertexAttribPointer(colorAttrLoc, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(2*sizeof(float)));
-  glEnableVertexAttribArray(colorAttrLoc);
+  // glVertexAttribPointer(colorAttrLoc, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(2*sizeof(float)));
+  // glEnableVertexAttribArray(colorAttrLoc);
 
 
 
@@ -512,7 +528,7 @@ int main() {
 
     /* Draw player */
     glUseProgram(shaderProgram);
-    float playerScale = 5.0f;
+    float playerScale = 1.0f;
     model = glm::translate(glm::mat4(1.0f), glm::vec3(WORLD_CENTER_X + playerXPos, playerYPos, 0.0f));
     model = glm::scale(model, glm::vec3(playerScale));
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
