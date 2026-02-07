@@ -14,7 +14,7 @@
 
 #define MOVE_SPEED_X 50.0f
 float playerXPos = 0.0f;
-float playerYPos = 10.0f;
+float playerYPos = 0.0f;
 float deltaTime = 0.0f;
 int num = 0;
 int fpsValue = 0;
@@ -44,13 +44,32 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 }
 
 
+wilo 2/6: because of how the circle vertices are generated,
+     the center of the ball is the origin of the ball.
+     but with the player rect, the origin is really the left side
+     (not sure if it's left top or left bottom) but this makes things
+     slightly different than with the ball. So keep digging into that.
+     potentially rewrite the playerVertices so this is more consistent
+     i.e. the center is the origin.
+     all it requires is offsetting the position values with half of
+     the width or height. but this creates some less clear, almost
+     "magic number" confusing logic (just looking out for future me, lol)
+     Also need to get FPS display working again!! shouldn't be too hard but make sure it works
+     after fixing positioning/scaling & consolidated shader.
+
 void updatePlayerPos() {
   // todo change this check to a func/macro called like keyPressed?
   if (keyStates[GLFW_KEY_D]) playerXPos += MOVE_SPEED_X * deltaTime;
   if (keyStates[GLFW_KEY_A]) playerXPos -= MOVE_SPEED_X * deltaTime;
   // todo get more robust way to keep player in bounds of screen
-  playerXPos = std::min(SCREEN_WIDTH/2, playerXPos);
-  playerXPos = std::max(-SCREEN_WIDTH/2, playerXPos);
+  float minX = 0;
+  float maxX = worldWidth;
+  float minY = 0;
+  float maxY = worldHeight;
+  std::cout << "playerXPos: " << playerXPos << std::endl;
+  if (playerXPos > maxX) playerXPos = maxX;
+  // playerXPos = std::min(SCREEN_WIDTH/2, playerXPos);
+  // playerXPos = std::max(-SCREEN_WIDTH/2, playerXPos);
 }
 
 int ballXDir = 1;
@@ -96,10 +115,6 @@ void updateBallPos() {
 //         for the size of the player rect; is there currently a player width/height anywhere? That would be useful here so
 //           that we can calculate if the ball is "within" the rect. Because we don't currently have that, the current collision logic
 //             is a bit imprecise (i.e. collide not detected until the ball is a few pixels inside the rect)
-  // wilp 2/5: refactored such that we now define a width and height for the player; perhaps need to store these in globals so I can access them
-  // for collision logic tho, so keep working on that. 
-  // Last thing I did was remove color attrib from player logic (which involved removing it from the shaders, but this is a general purpose shader
-  // that the cross also uses so now it's green). Update the shader to take a color as a uniform and make the bars black but the player green.
   if (BALL_BOTTOM_Y <= playerYPos) {
     std::cout << "collide" << std::endl;
   }
@@ -179,9 +194,7 @@ GLuint createBall(int segments) {
 
     vertices.push_back(bX);
     vertices.push_back(bY);
-
   }
-
   
   /* Setup vao and vbo */
   GLuint vao, vbo;
@@ -343,27 +356,27 @@ int main() {
 
   GLuint shaderProgram = createShaderProgram("shader");
   GLint posAttrLoc = glGetAttribLocation(shaderProgram, "aPos");
-  // GLint colorAttrLoc = glGetAttribLocation(shaderProgram, "aColor");
+  int colorUniformLoc = glGetUniformLocation(shaderProgram, "uColor");
+  int modelUniformLoc = glGetUniformLocation(shaderProgram, "model");
+  int viewUniformLoc = glGetUniformLocation(shaderProgram, "view");
+  int projUniformLoc = glGetUniformLocation(shaderProgram, "projection");
 
-  GLuint numberShaderProgram = createShaderProgram("number");
-  GLint numberPosAttrLoc = glGetAttribLocation(numberShaderProgram, "aPos");
 
-  // todo 2/5:
-  // remove color attribute from player vertex data. why is that even there? just use a uniform or something
+  // GLuint numberShaderProgram = createShaderProgram("number");
+  // GLint numberPosAttrLoc = glGetAttribLocation(numberShaderProgram, "aPos");
+
   float playerBaseWidth = 5.0f;
   float playerBaseHeight = 1.0f;
   float playerVertices[] = {
-    // 0.0f, playerBaseHeight,        0.0f, 1.0f, 0.0f,
-    // 0.0f, 0.0f,                0.0f, 1.0f, 0.0f,
-    // playerBaseWidth, 0.0f,         0.0f, 1.0f, 0.0f,
-    // playerBaseWidth, playerBaseHeight, 0.0f, 1.0f, 0.0f,
-
+    // 0.0f, playerBaseHeight,
+    // 0.0f, 0.0f,
+    // playerBaseWidth, 0.0f,
+    // playerBaseWidth, playerBaseHeight
     0.0f, playerBaseHeight,
     0.0f, 0.0f,
     playerBaseWidth, 0.0f,
     playerBaseWidth, playerBaseHeight
   };
-
 
   unsigned int playerIndices[] = {
     0, 1, 2,
@@ -405,26 +418,27 @@ int main() {
   std::cout << "worldWidth: " << worldWidth << std::endl;
   std::cout << "worldHeight: " << worldHeight << std::endl;
 
-  int modelLoc = glGetUniformLocation(shaderProgram, "model");
-  int viewLoc = glGetUniformLocation(shaderProgram, "view");
-  int projectionLoc = glGetUniformLocation(shaderProgram, "projection");
+  // int modelLoc = glGetUniformLocation(shaderProgram, "model");
+  // int viewLoc = glGetUniformLocation(shaderProgram, "view");
+  // int projectionLoc = glGetUniformLocation(shaderProgram, "projection");
 
   /* Load uniforms to number shader */
-  int numberModelLoc = glGetUniformLocation(numberShaderProgram, "model");
-  int numberViewLoc = glGetUniformLocation(numberShaderProgram, "view");
-  int numberProjectionLoc = glGetUniformLocation(numberShaderProgram, "projection");
-  int colorUniformLoc = glGetUniformLocation(numberShaderProgram, "uColor");
-  glUseProgram(numberShaderProgram);
-  glUniform3f(colorUniformLoc, 1.0f, 0.1f, 0.1f);
-  glUniformMatrix4fv(numberModelLoc, 1, GL_FALSE, glm::value_ptr(model));
-  glUniformMatrix4fv(numberViewLoc, 1, GL_FALSE, glm::value_ptr(view));
-  glUniformMatrix4fv(numberProjectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+  // int numberModelLoc = glGetUniformLocation(numberShaderProgram, "model");
+  // int numberViewLoc = glGetUniformLocation(numberShaderProgram, "view");
+  // int numberProjectionLoc = glGetUniformLocation(numberShaderProgram, "projection");
+  // int numberColorUniformLoc = glGetUniformLocation(numberShaderProgram, "uColor");
+  // glUseProgram(numberShaderProgram);
+  // todo prob need to copy these loads and put in render loop?
+  // glUniform3f(numberColorUniformLoc, 1.0f, 0.1f, 0.1f);
+  // glUniformMatrix4fv(numberModelLoc, 1, GL_FALSE, glm::value_ptr(model));
+  // glUniformMatrix4fv(numberViewLoc, 1, GL_FALSE, glm::value_ptr(view));
+  // glUniformMatrix4fv(numberProjectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
   /* Load uniforms to base shader */
   glUseProgram(shaderProgram);
-  glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-  glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-  glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+  glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
+  glUniformMatrix4fv(viewUniformLoc, 1, GL_FALSE, glm::value_ptr(view));
+  glUniformMatrix4fv(projUniformLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
   /* Create number models */
   NumberModel numberModels[] = {
@@ -500,6 +514,8 @@ int main() {
    * ==================================*/
   ballXPos = WORLD_CENTER_X;
   ballYPos = WORLD_CENTER_Y;
+  playerYPos = 10.0f;
+  playerXPos = WORLD_CENTER_X;
   while (!glfwWindowShouldClose(window)) {
 
     glfwPollEvents();
@@ -507,31 +523,21 @@ int main() {
     glClearColor(0.0f, 0.6f, 0.2f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // /* Draw number/text */
-    // glUseProgram(numberShaderProgram);
-    // glUniform3f(colorUniformLoc, 1.0f, 0.1f, 0.1f);
-    // // model = glm::translate(glm::mat4(1.0f), glm::vec3(xPos, 0.0f, 0.0f));
-    // model = glm::mat4(1.0f);
-    // model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.0f));
-    // glUniformMatrix4fv(numberModelLoc, 1, GL_FALSE, glm::value_ptr(model));
-    // glUniform3f(colorUniformLoc, 1.0f, 0.1f, 0.1f);
-    // numberModels[num].draw();
-
     /* Draw ball */
     glUniform3f(colorUniformLoc, 0.0f, 0.0f, 0.0f);
-    // model = glm::translate(glm::mat4(1.0f), glm::vec3(WORLD_CENTER_X + ballXPos, WORLD_CENTER_Y + ballYPos, 0.0f));
     model = glm::translate(glm::mat4(1.0f), glm::vec3(ballXPos, ballYPos, 0.0f));
     model = glm::scale(model, glm::vec3(BALL_RADIUS));
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
     glBindVertexArray(ballVAO);
     glDrawArrays(GL_TRIANGLES, 0, ballSegments*3);
 
     /* Draw player */
     glUseProgram(shaderProgram);
     float playerScale = 1.0f;
-    model = glm::translate(glm::mat4(1.0f), glm::vec3(WORLD_CENTER_X + playerXPos, playerYPos, 0.0f));
+    model = glm::translate(glm::mat4(1.0f), glm::vec3(playerXPos, playerYPos, 0.0f));
     model = glm::scale(model, glm::vec3(playerScale));
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniform3f(colorUniformLoc, 0.0f, 1.0f, 0.5f);
 
     glBindVertexArray(playerVAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
@@ -547,20 +553,19 @@ int main() {
 
     /* Draw cross */
     glUseProgram(shaderProgram);
-    // model = glm::mat4(1.0f);
     model = glm::translate(glm::mat4(1.0f), glm::vec3(WORLD_CENTER_X, WORLD_CENTER_Y, 0.0f));
-// WILO: thought I couldn't get the cross bar, but I can; just that the thickness was so low that it wasn't appearing for the vertical line.
-//         Now that they both appear, i can see one appears thicker than the other. Why? obviously has to do with the differening ratio of worldHeight
-//         and worldWidth. But dive into it more and get a better understanding.
-    // model = glm::translate(glm::mat4(1.0f), glm::vec3(50.0f, 23.0f, 0.0f));
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glm::vec3 color = glm::vec3(0.0f, 0.0f, 0.0f);
+    glUniform3fv(colorUniformLoc, 1, glm::value_ptr(color));
+
     glBindVertexArray(crossVAO);
     glDrawArrays(GL_TRIANGLES, 0, 12);
 
 
 
     /* Update FPS display (without class) */
-    glUseProgram(numberShaderProgram);
+    // glUseProgram(numberShaderProgram);
+    glUseProgram(shaderProgram);
     std::vector<int> digits = getDigits(fpsValue);
     float x, y;
     x = 0.125f;
@@ -568,7 +573,7 @@ int main() {
       model = glm::mat4(1.0f);
       model = glm::translate(model, glm::vec3(-2.0f+x*i, 1.1f+y*i, 0.0f));
       model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.0f));
-      glUniformMatrix4fv(numberModelLoc, 1, GL_FALSE, glm::value_ptr(model));
+      glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
       glUniform3f(colorUniformLoc, 0.6f, 0.0f, 0.6f);
       numberModels[digits[i]].draw();
     }
