@@ -11,26 +11,72 @@
 
 #include "numbers.hpp"
 
+typedef struct {
+  float x;
+  float y;
+} Position;
+
+// todo move to its own file
+class RectPosition {
+  public:
+    RectPosition(float x, float y, float width, float height) : x(x), y(y), width(width), height(height) {}
+    float getLeftX() {
+      return x;
+    }
+    float getRightX() {
+      return x + width;
+    }
+    float getBottomY() {
+      return y;
+    }
+    float getTopY() {
+      return y + height;
+    }
+    void setLeftX(float newX) {
+      x = newX;
+    }
+    void setRightX(float newX) {
+      x = newX - width;
+    }
+    void setBottomY(float newY) {
+      y = newY;
+    }
+    void setTopY(float newY) {
+      y = newY - height;
+    }
+    void setCenterX(float newX) {
+      x = newX - width/2;
+    }
+    void incrementX(float value) {
+      x += value;
+    }
+    void decrementX(float value) {
+      x -= value;
+    }
+  private:
+    // Origin of object is bottom left
+    float x; // left side
+    float y; // bottom
+    float width;
+    float height;
+};
 
 #define MOVE_SPEED_X 50.0f
-float playerXPos = 0.0f;
-float playerYPos = 0.0f;
+const float playerScale = 1.0f;
+const float playerBaseWidth = 5.0f;
+const float playerBaseHeight = 1.0f;
+RectPosition playerPos(0.0f, 0.0f, playerBaseWidth*playerScale, playerBaseHeight*playerScale);
+
+
 float deltaTime = 0.0f;
-int num = 0;
 int fpsValue = 0;
 
 float worldWidth;
 float worldHeight;
 #define WORLD_CENTER_X (worldWidth/2)
 #define WORLD_CENTER_Y (worldHeight/2)
-float BALL_RADIUS = 3.0f;
-float ballXPos = WORLD_CENTER_X;
-float ballYPos = WORLD_CENTER_Y;
-
-
-float SCREEN_WIDTH = 100.0f;
-float SCREEN_HEIGHT = 100.0f;
-
+const float BALL_RADIUS = 3.0f;
+Position ballPos;
 
 
 bool keyStates[500]; // GLFW keys are 32 - 348
@@ -44,94 +90,63 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 }
 
 
-wilo 2/6: because of how the circle vertices are generated,
-     the center of the ball is the origin of the ball.
-     but with the player rect, the origin is really the left side
-     (not sure if it's left top or left bottom) but this makes things
-     slightly different than with the ball. So keep digging into that.
-     potentially rewrite the playerVertices so this is more consistent
-     i.e. the center is the origin.
-     all it requires is offsetting the position values with half of
-     the width or height. but this creates some less clear, almost
-     "magic number" confusing logic (just looking out for future me, lol)
-     Also need to get FPS display working again!! shouldn't be too hard but make sure it works
-     after fixing positioning/scaling & consolidated shader.
-
 void updatePlayerPos() {
-  // todo change this check to a func/macro called like keyPressed?
-  if (keyStates[GLFW_KEY_D]) playerXPos += MOVE_SPEED_X * deltaTime;
-  if (keyStates[GLFW_KEY_A]) playerXPos -= MOVE_SPEED_X * deltaTime;
-  // todo get more robust way to keep player in bounds of screen
+  if (keyStates[GLFW_KEY_D]) playerPos.incrementX(MOVE_SPEED_X * deltaTime);
+  if (keyStates[GLFW_KEY_A]) playerPos.decrementX(MOVE_SPEED_X * deltaTime);
+
   float minX = 0;
   float maxX = worldWidth;
   float minY = 0;
   float maxY = worldHeight;
-  std::cout << "playerXPos: " << playerXPos << std::endl;
-  if (playerXPos > maxX) playerXPos = maxX;
-  // playerXPos = std::min(SCREEN_WIDTH/2, playerXPos);
-  // playerXPos = std::max(-SCREEN_WIDTH/2, playerXPos);
+  if (playerPos.getRightX() > maxX) playerPos.setRightX(maxX);
+  if (playerPos.getLeftX() < minX) playerPos.setLeftX(minX);
 }
+
 
 int ballXDir = 1;
 int ballYDir = 1;
 float ballSpeed = 50.0f;
-#define BALL_BOTTOM_Y (ballYPos - BALL_RADIUS)
-#define BALL_TOP_Y (ballYPos + BALL_RADIUS)
-#define BALL_RIGHT_X (ballXPos + BALL_RADIUS)
-#define BALL_LEFT_X (ballXPos - BALL_RADIUS)
+#define BALL_BOTTOM_Y (ballPos.y - BALL_RADIUS)
+#define BALL_TOP_Y (ballPos.y + BALL_RADIUS)
+#define BALL_RIGHT_X (ballPos.x + BALL_RADIUS)
+#define BALL_LEFT_X (ballPos.x - BALL_RADIUS)
 void updateBallPos() {
   float minX = 0;
   float maxX = worldWidth;
   float minY = 0;
   float maxY = worldHeight;
   if (keyStates[GLFW_KEY_RIGHT] && BALL_RIGHT_X < maxX) {
-    ballXPos += ballSpeed * deltaTime;
+    ballPos.x += ballSpeed * deltaTime;
   }
   if (keyStates[GLFW_KEY_LEFT] && BALL_LEFT_X > minX) {
-    ballXPos -= ballSpeed * deltaTime;
+    ballPos.x -= ballSpeed * deltaTime;
   }
   if (keyStates[GLFW_KEY_DOWN] && BALL_BOTTOM_Y > minY) {
-    ballYPos -= ballSpeed * deltaTime;
+    ballPos.y -= ballSpeed * deltaTime;
   }
   if (keyStates[GLFW_KEY_UP] && BALL_TOP_Y < maxY) {
-    ballYPos += ballSpeed * deltaTime;
+    ballPos.y += ballSpeed * deltaTime;
   }
 
   /* This code makes the ball bounce around without user input */
-  // ballXPos += ballSpeed * deltaTime * ballXDir;
-  // ballYPos += ballSpeed * deltaTime * ballYDir;
+  // ballPos.x += ballSpeed * deltaTime * ballXDir;
+  // ballPos.y += ballSpeed * deltaTime * ballYDir;
   // // todo do some slick math here to calculate exact collisions
-  // if (ballXPos > maxX) ballXDir = -1;
-  // if (ballXPos < -maxX) ballXDir = 1;
+  // if (ballPos.x > maxX) ballXDir = -1;
+  // if (ballPos.x < -maxX) ballXDir = 1;
   //
-  // // ballYPos += ballSpeed * deltaTime * ballYDir;
-  // if (ballYPos > maxY) ballYDir = -1;
-  // if (ballYPos < -maxY) ballYDir = 1;
+  // // ballPos.y += ballSpeed * deltaTime * ballYDir;
+  // if (ballPos.y > maxY) ballYDir = -1;
+  // if (ballPos.y < -maxY) ballYDir = 1;
 
   // Check for collision with player
-  // std::cout << "playerYPos: " << playerYPos << std::endl;
-  // std::cout << "ballXPos: " << ballXPos << std::endl;
-// wilo: 2/4 refactoring some ball stuff, added BALL_BOTTOM_Y, working on ball & player collision logic. need to implement the math
-//         for the size of the player rect; is there currently a player width/height anywhere? That would be useful here so
-//           that we can calculate if the ball is "within" the rect. Because we don't currently have that, the current collision logic
-//             is a bit imprecise (i.e. collide not detected until the ball is a few pixels inside the rect)
-  if (BALL_BOTTOM_Y <= playerYPos) {
-    std::cout << "collide" << std::endl;
-  }
+  // std::cout << "playerPos.y: " << playerPos.y << std::endl;
+  // std::cout << "ballPos.x: " << ballPos.x << std::endl;
+  // todo: fully implement ball player collision
+  // if (BALL_BOTTOM_Y <= playerPos.y) { // todo update after rewriting playerPos logic
+  //   std::cout << "collide" << std::endl;
+  // }
 }
-void updateNum() {
-  if (keyStates[GLFW_KEY_0]) num = 0;
-  if (keyStates[GLFW_KEY_1]) num = 1;
-  if (keyStates[GLFW_KEY_2]) num = 2;
-  if (keyStates[GLFW_KEY_3]) num = 3;
-  if (keyStates[GLFW_KEY_4]) num = 4;
-  if (keyStates[GLFW_KEY_5]) num = 5;
-  if (keyStates[GLFW_KEY_6]) num = 6;
-  if (keyStates[GLFW_KEY_7]) num = 7;
-  if (keyStates[GLFW_KEY_8]) num = 8;
-  if (keyStates[GLFW_KEY_9]) num = 9;
-}
-
 
 void updateKeyStates(GLFWwindow* window) {
   /* Update data structure that keeps track of which keys are currently
@@ -148,7 +163,7 @@ void processKeyInput(GLFWwindow* window) {
   updateKeyStates(window);
 
   updatePlayerPos();
-  updateNum();
+  updateBallPos();
 }
 
 void createNumber(float vertices[], int verticesSize, unsigned int indices[], int indicesSize, GLuint &vao, GLuint &vbo, GLuint &ebo) {
@@ -362,16 +377,7 @@ int main() {
   int projUniformLoc = glGetUniformLocation(shaderProgram, "projection");
 
 
-  // GLuint numberShaderProgram = createShaderProgram("number");
-  // GLint numberPosAttrLoc = glGetAttribLocation(numberShaderProgram, "aPos");
-
-  float playerBaseWidth = 5.0f;
-  float playerBaseHeight = 1.0f;
   float playerVertices[] = {
-    // 0.0f, playerBaseHeight,
-    // 0.0f, 0.0f,
-    // playerBaseWidth, 0.0f,
-    // playerBaseWidth, playerBaseHeight
     0.0f, playerBaseHeight,
     0.0f, 0.0f,
     playerBaseWidth, 0.0f,
@@ -398,10 +404,6 @@ int main() {
   glVertexAttribPointer(posAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
   glEnableVertexAttribArray(posAttrLoc);
 
-  // glVertexAttribPointer(colorAttrLoc, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(2*sizeof(float)));
-  // glEnableVertexAttribArray(colorAttrLoc);
-
-
 
   glm::mat4 model = glm::mat4(1.0f);
   // model = glm::rotate(model, glm::radians(13.0f), glm::vec3(1.0f, 0.0f, 1.0f));
@@ -417,22 +419,6 @@ int main() {
   projection = glm::ortho(0.0f, worldWidth, 0.0f, worldHeight, -10.0f, 10.0f);
   std::cout << "worldWidth: " << worldWidth << std::endl;
   std::cout << "worldHeight: " << worldHeight << std::endl;
-
-  // int modelLoc = glGetUniformLocation(shaderProgram, "model");
-  // int viewLoc = glGetUniformLocation(shaderProgram, "view");
-  // int projectionLoc = glGetUniformLocation(shaderProgram, "projection");
-
-  /* Load uniforms to number shader */
-  // int numberModelLoc = glGetUniformLocation(numberShaderProgram, "model");
-  // int numberViewLoc = glGetUniformLocation(numberShaderProgram, "view");
-  // int numberProjectionLoc = glGetUniformLocation(numberShaderProgram, "projection");
-  // int numberColorUniformLoc = glGetUniformLocation(numberShaderProgram, "uColor");
-  // glUseProgram(numberShaderProgram);
-  // todo prob need to copy these loads and put in render loop?
-  // glUniform3f(numberColorUniformLoc, 1.0f, 0.1f, 0.1f);
-  // glUniformMatrix4fv(numberModelLoc, 1, GL_FALSE, glm::value_ptr(model));
-  // glUniformMatrix4fv(numberViewLoc, 1, GL_FALSE, glm::value_ptr(view));
-  // glUniformMatrix4fv(numberProjectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
   /* Load uniforms to base shader */
   glUseProgram(shaderProgram);
@@ -501,10 +487,8 @@ int main() {
   glGenBuffers(1, &crossVBO);
   glBindBuffer(GL_ARRAY_BUFFER, crossVBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(crossVertices), crossVertices, GL_STATIC_DRAW);
-  // glUseProgram(shaderProgram);
   glVertexAttribPointer(posAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
   glEnableVertexAttribArray(posAttrLoc);
-  // glVertexAttribPointer(colorAttrLoc);
 
   
 
@@ -512,10 +496,10 @@ int main() {
   /*====================================
    *            RENDER LOOP
    * ==================================*/
-  ballXPos = WORLD_CENTER_X;
-  ballYPos = WORLD_CENTER_Y;
-  playerYPos = 10.0f;
-  playerXPos = WORLD_CENTER_X;
+  ballPos.x = WORLD_CENTER_X;
+  ballPos.y = WORLD_CENTER_Y;
+  playerPos.setBottomY(10.0f);
+  playerPos.setCenterX(WORLD_CENTER_X);
   while (!glfwWindowShouldClose(window)) {
 
     glfwPollEvents();
@@ -525,7 +509,7 @@ int main() {
 
     /* Draw ball */
     glUniform3f(colorUniformLoc, 0.0f, 0.0f, 0.0f);
-    model = glm::translate(glm::mat4(1.0f), glm::vec3(ballXPos, ballYPos, 0.0f));
+    model = glm::translate(glm::mat4(1.0f), glm::vec3(ballPos.x, ballPos.y, 0.0f));
     model = glm::scale(model, glm::vec3(BALL_RADIUS));
     glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
     glBindVertexArray(ballVAO);
@@ -533,8 +517,7 @@ int main() {
 
     /* Draw player */
     glUseProgram(shaderProgram);
-    float playerScale = 1.0f;
-    model = glm::translate(glm::mat4(1.0f), glm::vec3(playerXPos, playerYPos, 0.0f));
+    model = glm::translate(glm::mat4(1.0f), glm::vec3(playerPos.getLeftX(), playerPos.getBottomY(), 0.0f));
     model = glm::scale(model, glm::vec3(playerScale));
     glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorUniformLoc, 0.0f, 1.0f, 0.5f);
@@ -567,12 +550,24 @@ int main() {
     // glUseProgram(numberShaderProgram);
     glUseProgram(shaderProgram);
     std::vector<int> digits = getDigits(fpsValue);
-    float x, y;
-    x = 0.125f;
+    // float x, y;
+    float digitOffsetX, digitOffsetY;
+    digitOffsetX = 0.125f; // this really should be called digitOffset
+wilo: working on getting fps display to work again. refactored some of this to fix vague variable names; tinkering with translate & scale
+        values to get something visible. seems like digits are getting drawn over top one another--likely due to digitOffsetX being far too small
+        for the new scale we're using.
+    float offsetX = 20.0f;
+    float offsetY = 10.0f;
+    std::cout << "\nfpsValue: " << fpsValue << std::endl;
     for (int i=0; i<digits.size(); i++) {
+      std::cout << "digits[i]: " << digits[i];
       model = glm::mat4(1.0f);
-      model = glm::translate(model, glm::vec3(-2.0f+x*i, 1.1f+y*i, 0.0f));
-      model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.0f));
+      float posX = offsetX + (digitOffsetX * i);
+      float posY = offsetY + digitOffsetY * i;
+      // model = glm::translate(model, glm::vec3(-2.0f+x*i, 1.1f+y*i, 0.0f));
+      model = glm::translate(model, glm::vec3(posX, posY, 0.0f));
+      float scale = 1.0f;
+      model = glm::scale(model, glm::vec3(scale));
       glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
       glUniform3f(colorUniformLoc, 0.6f, 0.0f, 0.6f);
       numberModels[digits[i]].draw();
@@ -581,7 +576,6 @@ int main() {
 
 
     processKeyInput(window);
-    updateBallPos();
 
 
     /* Logic to display at the set FPS */
@@ -612,8 +606,6 @@ int main() {
   return 0;
 }
 
-// wilo: just as a random technical challenge, implement some logic to "zoom in" to the point where the cursor is. (perhaps much more challenging than
-//           it seems)
 
 /*
  *todo thoughts on restructuring classes & shit:
@@ -647,22 +639,10 @@ Inlining control
 Methods defined inside the class are implicitly inline. Sometimes you don’t want that for bigger functions because it can increase compile time or binary size.*/
 
 /*
-WILO: got the one and two show up!! code is pretty gross, but just working on making it work for now. Next steps:
-could implement all numbers. but I think I understand it well enough to pivot towards making this functionality
-less dogshit and more DRY (like mentioned below, make a class for numbers that encapsulates the relevant data.)
-Ideally some sort of draw function like drawNumber(1) would draw 1 (and of course implement it for double digits
-after single digits is working, etc).
-Then worry about positioning, scaling, etc.
-Then hooking it up to the FPS calculated via the render loop
 Questions/next steps:
-- Refactor idea: make a class that encapsulates a single number (vertices, indices, vao, vbo, ebo, shader (??questionable))
-- scale it down and position it.
-- expand functionality to all numbers (make new file for this?)
-- remove colors from numbers vertices
 - write some sort of pattern parser so I can create an ASCII shape and turn it into a shape to be rendered in the scene
  * Things to do:
  - nvim: remove the auto * in these multiline comments when going to a new line.
- - keep rect from going off screen
  - after you get a decent 2D game going, add a button or something to switch to 3d, and add some cool effects and shit
  * */
 
