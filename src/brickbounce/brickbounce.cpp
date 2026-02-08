@@ -69,7 +69,7 @@ RectPosition playerPos(0.0f, 0.0f, playerBaseWidth*playerScale, playerBaseHeight
 
 
 float deltaTime = 0.0f;
-int fpsValue = 0;
+int actualFPS = 0;
 
 float worldWidth;
 float worldHeight;
@@ -446,13 +446,14 @@ int main() {
   int ballSegments = 24;
   GLuint ballVAO = createBall(ballSegments);
 
-  int fps = 5000; // todo: not that it matters, but setting this to 30 makes the game suuuuper sluggish, like more sluggish than 30fps should be.
-  float secPerFrame = 1.0 / fps;
+  // todo: for some reason, the actual fps seems to always be ~75% of the given goalFPS value. Why?? Are these proportions consistent with all values?? Is this just on the laptop or also on the desktop??
+  int goalFPS = 400; // todo: not that it matters, but setting this to 30 makes the game suuuuper sluggish, like more sluggish than 30fps should be.
+  float secPerFrame = 1.0 / goalFPS;
   float lastLoop = 0;
   float lastFrame = 0;
 
   FPSDisplay fpsDisplay;
-  int framesCount = 0;
+  int framesThisSec = 0;
   float prevFPSUpdate = glfwGetTime();
 
   glfwSwapInterval(0); // disable vsync
@@ -547,26 +548,19 @@ int main() {
 
 
     /* Update FPS display (without class) */
-    // glUseProgram(numberShaderProgram);
+    /* Any magic numbers here exist to make the FPS display
+     * appear in the right spot */
+
     glUseProgram(shaderProgram);
-    std::vector<int> digits = getDigits(fpsValue);
-    // float x, y;
-    float digitOffsetX, digitOffsetY;
-    digitOffsetX = 0.125f; // this really should be called digitOffset
-wilo: working on getting fps display to work again. refactored some of this to fix vague variable names; tinkering with translate & scale
-        values to get something visible. seems like digits are getting drawn over top one another--likely due to digitOffsetX being far too small
-        for the new scale we're using.
-    float offsetX = 20.0f;
-    float offsetY = 10.0f;
-    std::cout << "\nfpsValue: " << fpsValue << std::endl;
+    std::vector<int> digits = getDigits(actualFPS);
+    const float scale = 0.2f;
+    const float paddingFromScreenLeft = 1.5f;
+    const float paddingFromScreenTop = 2.5f;
+    const float digitOffset = 1.5f; // offset proportional to place value of digits, resulting in visual space between digits
+    const float transY = worldHeight - paddingFromScreenTop;
     for (int i=0; i<digits.size(); i++) {
-      std::cout << "digits[i]: " << digits[i];
-      model = glm::mat4(1.0f);
-      float posX = offsetX + (digitOffsetX * i);
-      float posY = offsetY + digitOffsetY * i;
-      // model = glm::translate(model, glm::vec3(-2.0f+x*i, 1.1f+y*i, 0.0f));
-      model = glm::translate(model, glm::vec3(posX, posY, 0.0f));
-      float scale = 1.0f;
+      float transX = (i * digitOffset) + paddingFromScreenLeft;
+      model = glm::translate(glm::mat4(1.0f), glm::vec3(transX, transY, 0.0f));
       model = glm::scale(model, glm::vec3(scale));
       glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
       glUniform3f(colorUniformLoc, 0.6f, 0.0f, 0.6f);
@@ -585,7 +579,7 @@ wilo: working on getting fps display to work again. refactored some of this to f
       glfwSwapBuffers(window);
       lastFrame = now;
 
-      framesCount++;
+      framesThisSec++;
     }
     lastLoop = now;
 
@@ -593,10 +587,10 @@ wilo: working on getting fps display to work again. refactored some of this to f
     /* Keep track of actual FPS */
     now = glfwGetTime();
     if (now - prevFPSUpdate >= 1) {
-      std::cout << "fps: " << fpsValue << std::endl;
+      std::cout << "fps: " << actualFPS << std::endl;
       prevFPSUpdate = now;
-      fpsValue = framesCount;
-      framesCount = 0;
+      actualFPS = framesThisSec;
+      framesThisSec = 0;
     }
 
     
