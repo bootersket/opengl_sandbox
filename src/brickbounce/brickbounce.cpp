@@ -11,11 +11,6 @@
 
 #include "numbers.hpp"
 
-typedef struct {
-  float x;
-  float y;
-} Position;
-
 // todo move to its own file
 class RectPosition {
   public:
@@ -61,7 +56,69 @@ class RectPosition {
     float height;
 };
 
-#define MOVE_SPEED_X 50.0f
+class CirclePosition {
+  public:
+    CirclePosition(float x, float y, float radius) : x(x), y(y), radius(radius) {}
+    float getX() {
+      return x;
+    }
+    float getY() {
+      return y;
+    }
+    float getLeftX() {
+      return x - radius;
+    }
+    float getRightX() {
+      return x + radius;
+    }
+    float getBottomY() {
+      return y - radius;
+    }
+    float getTopY() {
+      return y + radius;
+    }
+    void setLeftX(float newX) {
+      x = newX + radius;
+    }
+    void setRightX(float newX) {
+      x = newX - radius;
+    }
+    void setBottomY(float newY) {
+      y = newY + radius;
+    }
+    void setTopY(float newY) {
+      y = newY - radius;
+    }
+    void setCenterX(float newX) {
+      x = newX;
+    }
+    void setCenterY(float newY) {
+      y = newY;
+    }
+    void setCenter(float newX, float newY) {
+      x = newX;
+      y = newY;
+    }
+    void incrementX(float value) {
+      x += value;
+    }
+    void decrementX(float value) {
+      x -= value;
+    }
+    void incrementY(float value) {
+      y += value;
+    }
+    void decrementY(float value) {
+      y -= value;
+    }
+  private:
+    // Origin of object is center
+    float x; // center
+    float y; // center
+    float radius;
+};
+
+#define MOVE_SPEED_X 100.0f
 const float playerScale = 1.0f;
 const float playerBaseWidth = 5.0f;
 const float playerBaseHeight = 1.0f;
@@ -75,8 +132,10 @@ float worldWidth;
 float worldHeight;
 #define WORLD_CENTER_X (worldWidth/2)
 #define WORLD_CENTER_Y (worldHeight/2)
+
+const float ballSpeed = 50.0f;
 const float BALL_RADIUS = 3.0f;
-Position ballPos;
+CirclePosition ballPos(0, 0, BALL_RADIUS);
 
 
 bool keyStates[500]; // GLFW keys are 32 - 348
@@ -105,39 +164,63 @@ void updatePlayerPos() {
 
 int ballXDir = 1;
 int ballYDir = 1;
-float ballSpeed = 50.0f;
-#define BALL_BOTTOM_Y (ballPos.y - BALL_RADIUS)
-#define BALL_TOP_Y (ballPos.y + BALL_RADIUS)
-#define BALL_RIGHT_X (ballPos.x + BALL_RADIUS)
-#define BALL_LEFT_X (ballPos.x - BALL_RADIUS)
+bool autoBall = true;
+
+wilo: refactored this: added class for ball pos, rewrote this func so that i can easily turn autoball movement
+on or off. go through and clean this up more so code is more concise and consolidated and shit (
+    i.e. could either split auto ball logic into its own func, and ditto with user-controlled ball;
+    or extract common logic from autoball & user ball eg. checking keeping ball within bounds, etc.
+    althought that might make it more weird since autoball needs to do the check for bounds as well
+    as direction, whereas userball only needs to do so for bounds
+    )
 void updateBallPos() {
   float minX = 0;
   float maxX = worldWidth;
   float minY = 0;
   float maxY = worldHeight;
-  if (keyStates[GLFW_KEY_RIGHT] && BALL_RIGHT_X < maxX) {
-    ballPos.x += ballSpeed * deltaTime;
+  if (autoBall) {
+    /* This code makes the ball bounce around without user input */
+    ballPos.incrementX(ballSpeed * deltaTime * ballXDir);
+    if (ballPos.getRightX() >= maxX) {
+      ballPos.setRightX(maxX);
+      ballXDir *= -1;
+    }
+    if (ballPos.getLeftX() <= minX) {
+      ballPos.setLeftX(minX);
+      ballXDir *= -1;
+    }
+
+    // ballPos.y += ballSpeed * deltaTime * ballYDir;
+    ballPos.incrementY(ballSpeed * deltaTime * ballYDir);
+    if (ballPos.getTopY() >= maxY) {
+      ballPos.setTopY(maxY);
+      ballYDir *= -1;
+    }
+    if (ballPos.getBottomY() <= minY) {
+      ballPos.setBottomY(minY);
+      ballYDir *= -1;
+    } 
+    // if (ballPos.get)
+    // if (ballPos.y > maxY) ballYDir = -1;
+    // if (ballPos.y < -maxY) ballYDir = 1;
+
   }
-  if (keyStates[GLFW_KEY_LEFT] && BALL_LEFT_X > minX) {
-    ballPos.x -= ballSpeed * deltaTime;
-  }
-  if (keyStates[GLFW_KEY_DOWN] && BALL_BOTTOM_Y > minY) {
-    ballPos.y -= ballSpeed * deltaTime;
-  }
-  if (keyStates[GLFW_KEY_UP] && BALL_TOP_Y < maxY) {
-    ballPos.y += ballSpeed * deltaTime;
+  else {
+    if (keyStates[GLFW_KEY_RIGHT] && ballPos.getRightX() < maxX) {
+      ballPos.incrementX(ballSpeed * deltaTime);
+    }
+    if (keyStates[GLFW_KEY_LEFT] && ballPos.getLeftX() > minX) {
+      ballPos.decrementX(ballSpeed * deltaTime); // todo make ballSpeed * deltaTime a variable
+    }
+    if (keyStates[GLFW_KEY_DOWN] && ballPos.getBottomY() > minY) {
+      ballPos.decrementY(ballSpeed * deltaTime);
+    }
+    if (keyStates[GLFW_KEY_UP] && ballPos.getTopY() < maxY) {
+      ballPos.incrementY(ballSpeed * deltaTime);
+    }
+
   }
 
-  /* This code makes the ball bounce around without user input */
-  // ballPos.x += ballSpeed * deltaTime * ballXDir;
-  // ballPos.y += ballSpeed * deltaTime * ballYDir;
-  // // todo do some slick math here to calculate exact collisions
-  // if (ballPos.x > maxX) ballXDir = -1;
-  // if (ballPos.x < -maxX) ballXDir = 1;
-  //
-  // // ballPos.y += ballSpeed * deltaTime * ballYDir;
-  // if (ballPos.y > maxY) ballYDir = -1;
-  // if (ballPos.y < -maxY) ballYDir = 1;
 
   // Check for collision with player
   // std::cout << "playerPos.y: " << playerPos.y << std::endl;
@@ -497,8 +580,10 @@ int main() {
   /*====================================
    *            RENDER LOOP
    * ==================================*/
-  ballPos.x = WORLD_CENTER_X;
-  ballPos.y = WORLD_CENTER_Y;
+  // ballPos.x = WORLD_CENTER_X;
+  // ballPos.y = WORLD_CENTER_Y;
+  ballPos.setCenterX(WORLD_CENTER_X);
+  ballPos.setCenterY(WORLD_CENTER_Y);
   playerPos.setBottomY(10.0f);
   playerPos.setCenterX(WORLD_CENTER_X);
   while (!glfwWindowShouldClose(window)) {
@@ -510,7 +595,8 @@ int main() {
 
     /* Draw ball */
     glUniform3f(colorUniformLoc, 0.0f, 0.0f, 0.0f);
-    model = glm::translate(glm::mat4(1.0f), glm::vec3(ballPos.x, ballPos.y, 0.0f));
+    // model = glm::translate(glm::mat4(1.0f), glm::vec3(ballPos.x, ballPos.y, 0.0f));
+    model = glm::translate(glm::mat4(1.0f), glm::vec3(ballPos.getX(), ballPos.getY(), 0.0f));
     model = glm::scale(model, glm::vec3(BALL_RADIUS));
     glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
     glBindVertexArray(ballVAO);
