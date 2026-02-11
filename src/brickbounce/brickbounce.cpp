@@ -134,7 +134,7 @@ float worldHeight;
 #define WORLD_CENTER_Y (worldHeight/2)
 
 const float ballSpeed = 50.0f;
-const float BALL_RADIUS = 3.0f;
+const float BALL_RADIUS = 1.0f;
 CirclePosition ballPos(0, 0, BALL_RADIUS);
 
 
@@ -165,62 +165,62 @@ void updatePlayerPos() {
 int ballXDir = 1;
 int ballYDir = 1;
 bool autoBall = true;
-
-wilo: refactored this: added class for ball pos, rewrote this func so that i can easily turn autoball movement
-on or off. go through and clean this up more so code is more concise and consolidated and shit (
-    i.e. could either split auto ball logic into its own func, and ditto with user-controlled ball;
-    or extract common logic from autoball & user ball eg. checking keeping ball within bounds, etc.
-    althought that might make it more weird since autoball needs to do the check for bounds as well
-    as direction, whereas userball only needs to do so for bounds
-    )
-void updateBallPos() {
+void updateBallPos_auto() {
   float minX = 0;
   float maxX = worldWidth;
   float minY = 0;
   float maxY = worldHeight;
-  if (autoBall) {
-    /* This code makes the ball bounce around without user input */
-    ballPos.incrementX(ballSpeed * deltaTime * ballXDir);
-    if (ballPos.getRightX() >= maxX) {
-      ballPos.setRightX(maxX);
-      ballXDir *= -1;
-    }
-    if (ballPos.getLeftX() <= minX) {
-      ballPos.setLeftX(minX);
-      ballXDir *= -1;
-    }
+  /* Move ball at set speed */
+  ballPos.incrementY(ballSpeed * deltaTime * ballYDir);
+  ballPos.incrementX(ballSpeed * deltaTime * ballXDir);
 
-    // ballPos.y += ballSpeed * deltaTime * ballYDir;
-    ballPos.incrementY(ballSpeed * deltaTime * ballYDir);
-    if (ballPos.getTopY() >= maxY) {
-      ballPos.setTopY(maxY);
-      ballYDir *= -1;
-    }
-    if (ballPos.getBottomY() <= minY) {
-      ballPos.setBottomY(minY);
-      ballYDir *= -1;
-    } 
-    // if (ballPos.get)
-    // if (ballPos.y > maxY) ballYDir = -1;
-    // if (ballPos.y < -maxY) ballYDir = 1;
-
+  /* Check right bounds */
+  if (ballPos.getRightX() >= maxX) {
+    ballPos.setRightX(maxX);
+    ballXDir *= -1;
   }
-  else {
-    if (keyStates[GLFW_KEY_RIGHT] && ballPos.getRightX() < maxX) {
-      ballPos.incrementX(ballSpeed * deltaTime);
-    }
-    if (keyStates[GLFW_KEY_LEFT] && ballPos.getLeftX() > minX) {
-      ballPos.decrementX(ballSpeed * deltaTime); // todo make ballSpeed * deltaTime a variable
-    }
-    if (keyStates[GLFW_KEY_DOWN] && ballPos.getBottomY() > minY) {
-      ballPos.decrementY(ballSpeed * deltaTime);
-    }
-    if (keyStates[GLFW_KEY_UP] && ballPos.getTopY() < maxY) {
-      ballPos.incrementY(ballSpeed * deltaTime);
-    }
-
+  /* Check left bounds */
+  if (ballPos.getLeftX() <= minX) {
+    ballPos.setLeftX(minX);
+    ballXDir *= -1;
   }
 
+  /* Check top bounds */
+  if (ballPos.getTopY() >= maxY) {
+    ballPos.setTopY(maxY);
+    ballYDir *= -1;
+  }
+  /* Check bottom bounds */
+  if (ballPos.getBottomY() <= minY) {
+    ballPos.setBottomY(minY);
+    ballYDir *= -1;
+  } 
+
+}
+void updateBallPos_user() {
+  float minX = 0;
+  float maxX = worldWidth;
+  float minY = 0;
+  float maxY = worldHeight;
+  float ballPosDelta = ballSpeed * deltaTime;
+  if (keyStates[GLFW_KEY_RIGHT] && ballPos.getRightX() < maxX) {
+    ballPos.incrementX(ballPosDelta);
+  }
+  if (keyStates[GLFW_KEY_LEFT] && ballPos.getLeftX() > minX) {
+    ballPos.decrementX(ballPosDelta);
+  }
+  if (keyStates[GLFW_KEY_DOWN] && ballPos.getBottomY() > minY) {
+    ballPos.decrementY(ballPosDelta);
+  }
+  if (keyStates[GLFW_KEY_UP] && ballPos.getTopY() < maxY) {
+    ballPos.incrementY(ballPosDelta);
+  }
+
+}
+
+void updateBallPos() {
+  if (autoBall) updateBallPos_auto();
+  else updateBallPos_user();
 
   // Check for collision with player
   // std::cout << "playerPos.y: " << playerPos.y << std::endl;
@@ -231,6 +231,19 @@ void updateBallPos() {
   // }
 }
 
+wilo: making spawn ball logic (goal: space bar causes ball to be spawned in random location)
+problem is that my processKeyInput and keyStates logic is mainly used for player movement, i.e.
+it registers a LOTTTT of input even on a quick tap (this makes sense for player movement input so that
+    the movement is not jerky and delayed). I could get around this by using the glfw key callback thing
+because however that works does NOT have this "player movement input friendly functionality" but I'd rather
+dig into what my code is doing and make it more flexible.
+Then continue on with rewriting stuff to support multiple balls!
+void spawnBall() {
+  std::cout << "spawn ball" << std::endl;
+}
+
+/* Utility function to update struct that keeps track of which keys are
+ * currently pressed down */
 void updateKeyStates(GLFWwindow* window) {
   /* Update data structure that keeps track of which keys are currently
    * being pressed for all keys. Other gameplay functions then check
@@ -242,11 +255,23 @@ void updateKeyStates(GLFWwindow* window) {
   }
 }
 
+
+
 void processKeyInput(GLFWwindow* window) {
   updateKeyStates(window);
 
+  // todo: potentially ambiguous/confusing phrasing here: updatePlayerPos/updateBallPos check for user input within them,
+  // so strictly speaking we're not necessarily updating the pos of these. maybe renaming these to something like handlePlayerPos, etc.
+  // might make more sense? Because I also don't necessarily want to clog up processKeyInput with a bunch of key input checks
   updatePlayerPos();
   updateBallPos();
+
+  if (keyStates[GLFW_KEY_SPACE]) {
+    spawnBall();
+  }
+
+
+  
 }
 
 void createNumber(float vertices[], int verticesSize, unsigned int indices[], int indicesSize, GLuint &vao, GLuint &vbo, GLuint &ebo) {
@@ -576,6 +601,10 @@ int main() {
 
   
 
+  /*
+  2/10: idea I have after having the auto ball logic going again is to have mouse click/space bar spawn new balls.
+  This requires rewworking the ball code because now we don't just have The Ball, but instead we have N balls
+  */
 
   /*====================================
    *            RENDER LOOP
@@ -642,7 +671,7 @@ int main() {
     const float scale = 0.2f;
     const float paddingFromScreenLeft = 1.5f;
     const float paddingFromScreenTop = 2.5f;
-    const float digitOffset = 1.5f; // offset proportional to place value of digits, resulting in visual space between digits
+    const float digitOffset = 1.5f; /* offset proportional to place value of digits, resulting in visual space between digits */
     const float transY = worldHeight - paddingFromScreenTop;
     for (int i=0; i<digits.size(); i++) {
       float transX = (i * digitOffset) + paddingFromScreenLeft;
@@ -669,7 +698,6 @@ int main() {
     }
     lastLoop = now;
 
-    // todo weird bug where sometimes the fps display will just be single digit
     /* Keep track of actual FPS */
     now = glfwGetTime();
     if (now - prevFPSUpdate >= 1) {
