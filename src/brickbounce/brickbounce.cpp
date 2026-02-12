@@ -11,6 +11,8 @@
 
 #include "numbers.hpp"
 
+void spawnBall();
+
 // todo move to its own file
 class RectPosition {
   public:
@@ -138,7 +140,11 @@ const float BALL_RADIUS = 1.0f;
 CirclePosition ballPos(0, 0, BALL_RADIUS);
 
 
-bool keyStates[500]; // GLFW keys are 32 - 348
+/* GLFW keys are 32 - 348 so 500 is more than enough */
+/* Store previous key states for edge detection i.e.
+ * detect when a key state changes from pressed to released, etc. */
+bool prevKeyStates[500];
+bool keyStates[500];
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
   glViewport(0, 0, width, height);
@@ -231,15 +237,11 @@ void updateBallPos() {
   // }
 }
 
-wilo: making spawn ball logic (goal: space bar causes ball to be spawned in random location)
-problem is that my processKeyInput and keyStates logic is mainly used for player movement, i.e.
-it registers a LOTTTT of input even on a quick tap (this makes sense for player movement input so that
-    the movement is not jerky and delayed). I could get around this by using the glfw key callback thing
-because however that works does NOT have this "player movement input friendly functionality" but I'd rather
-dig into what my code is doing and make it more flexible.
-Then continue on with rewriting stuff to support multiple balls!
+// bool needBallSpawn = false;
 void spawnBall() {
+  // if (!needBallSpawn) return;
   std::cout << "spawn ball" << std::endl;
+  // needBallSpawn = false;
 }
 
 /* Utility function to update struct that keeps track of which keys are
@@ -250,13 +252,22 @@ void updateKeyStates(GLFWwindow* window) {
    * these key states to decide what actions should be performed
    * eg. move player, etc. */
   for (int key=0; key<sizeof(keyStates)/sizeof(keyStates[key]); key++) {
+    prevKeyStates[key] = keyStates[key];
     if (glfwGetKey(window, key) == GLFW_PRESS) keyStates[key] = true;
     else if (glfwGetKey(window, key) == GLFW_RELEASE) keyStates[key] = false;
   }
 }
 
 
+wilo: fixed the input for spawning a ball (implemented edge level detection)
 
+/* These macros help facilitate edge-level input detection 
+ * I use the phrasing key **just** pressed/released to make it
+ * clear that it's not simply checking if the key is currently 
+ * pressed(as this could be true for any amount of time, 
+ * i.e. as long as the user is holding the key down) */
+#define keyJustPressed(key) (keyStates[key] && !prevKeyStates[key])
+#define keyJustReleased(key) (!keyStates[key] && prevKeyStates[key])
 void processKeyInput(GLFWwindow* window) {
   updateKeyStates(window);
 
@@ -266,12 +277,10 @@ void processKeyInput(GLFWwindow* window) {
   updatePlayerPos();
   updateBallPos();
 
-  if (keyStates[GLFW_KEY_SPACE]) {
+  if (keyJustPressed(GLFW_KEY_SPACE)) {
     spawnBall();
   }
 
-
-  
 }
 
 void createNumber(float vertices[], int verticesSize, unsigned int indices[], int indicesSize, GLuint &vao, GLuint &vbo, GLuint &ebo) {
