@@ -120,6 +120,28 @@ class CirclePosition {
     float radius;
 };
 
+wilo: implementing ball class that encapsulates pos as well as speed 
+and dir since we now need a different dir per ball.
+running into an error where the pos member is apparently private?
+not familiar enough with c++; how does it work to access a member that
+is itself an object?
+class Ball {
+  public:
+    CirclePosition pos;
+    float speed;
+    int dir;
+
+    Ball(float x, float y, float radius, float speed, int dir) {
+      pos.x = x;
+      pos.y = y;
+      pos.radius = radius;
+      speed = speed;
+      dir = dir;
+    }
+
+
+};
+
 #define MOVE_SPEED_X 100.0f
 const float playerScale = 1.0f;
 const float playerBaseWidth = 5.0f;
@@ -138,6 +160,7 @@ float worldHeight;
 const float ballSpeed = 50.0f;
 const float BALL_RADIUS = 1.0f;
 CirclePosition ballPos(0, 0, BALL_RADIUS);
+std::vector<CirclePosition> balls;
 
 
 /* GLFW keys are 32 - 348 so 500 is more than enough */
@@ -171,6 +194,7 @@ void updatePlayerPos() {
 int ballXDir = 1;
 int ballYDir = 1;
 bool autoBall = true;
+
 void updateBallPos_auto() {
   float minX = 0;
   float maxX = worldWidth;
@@ -201,7 +225,37 @@ void updateBallPos_auto() {
     ballPos.setBottomY(minY);
     ballYDir *= -1;
   } 
+}
+void updateBallPos_auto(CirclePosition ball) {
+  float minX = 0;
+  float maxX = worldWidth;
+  float minY = 0;
+  float maxY = worldHeight;
+  /* Move ball at set speed */
+  ball.incrementY(ballSpeed * deltaTime * ballYDir);
+  ball.incrementX(ballSpeed * deltaTime * ballXDir);
 
+  /* Check right bounds */
+  if (ball.getRightX() >= maxX) {
+    ball.setRightX(maxX);
+    ballXDir *= -1;
+  }
+  /* Check left bounds */
+  if (ball.getLeftX() <= minX) {
+    ball.setLeftX(minX);
+    ballXDir *= -1;
+  }
+
+  /* Check top bounds */
+  if (ball.getTopY() >= maxY) {
+    ball.setTopY(maxY);
+    ballYDir *= -1;
+  }
+  /* Check bottom bounds */
+  if (ball.getBottomY() <= minY) {
+    ball.setBottomY(minY);
+    ballYDir *= -1;
+  } 
 }
 void updateBallPos_user() {
   float minX = 0;
@@ -237,10 +291,20 @@ void updateBallPos() {
   // }
 }
 
+void updateBalls() {
+  for (int i=0; i<balls.size(); i++) {
+    updateBallPos_auto(balls[i]);
+  }
+}
+
 // bool needBallSpawn = false;
 void spawnBall() {
   // if (!needBallSpawn) return;
   std::cout << "spawn ball" << std::endl;
+  CirclePosition ball(WORLD_CENTER_X, WORLD_CENTER_Y, BALL_RADIUS);
+  ballPos.setCenterX(WORLD_CENTER_X);
+  ballPos.setCenterY(WORLD_CENTER_Y);
+  balls.push_back(ball);
   // needBallSpawn = false;
 }
 
@@ -259,8 +323,6 @@ void updateKeyStates(GLFWwindow* window) {
 }
 
 
-wilo: fixed the input for spawning a ball (implemented edge level detection)
-
 /* These macros help facilitate edge-level input detection 
  * I use the phrasing key **just** pressed/released to make it
  * clear that it's not simply checking if the key is currently 
@@ -275,7 +337,8 @@ void processKeyInput(GLFWwindow* window) {
   // so strictly speaking we're not necessarily updating the pos of these. maybe renaming these to something like handlePlayerPos, etc.
   // might make more sense? Because I also don't necessarily want to clog up processKeyInput with a bunch of key input checks
   updatePlayerPos();
-  updateBallPos();
+  // updateBallPos();
+  updateBalls();
 
   if (keyJustPressed(GLFW_KEY_SPACE)) {
     spawnBall();
@@ -615,15 +678,16 @@ int main() {
   This requires rewworking the ball code because now we don't just have The Ball, but instead we have N balls
   */
 
+  // ballPos.x = WORLD_CENTER_X;
+  // ballPos.y = WORLD_CENTER_Y;
+  // ballPos.setCenterX(WORLD_CENTER_X);
+  // ballPos.setCenterY(WORLD_CENTER_Y);
+  playerPos.setBottomY(10.0f);
+  playerPos.setCenterX(WORLD_CENTER_X);
+
   /*====================================
    *            RENDER LOOP
    * ==================================*/
-  // ballPos.x = WORLD_CENTER_X;
-  // ballPos.y = WORLD_CENTER_Y;
-  ballPos.setCenterX(WORLD_CENTER_X);
-  ballPos.setCenterY(WORLD_CENTER_Y);
-  playerPos.setBottomY(10.0f);
-  playerPos.setCenterX(WORLD_CENTER_X);
   while (!glfwWindowShouldClose(window)) {
 
     glfwPollEvents();
