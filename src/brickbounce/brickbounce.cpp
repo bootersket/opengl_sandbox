@@ -60,13 +60,17 @@ class RectPosition {
 
 class CirclePosition {
   public:
+    // Origin of object is center
+    float x; // center
+    float y; // center
+    float radius;
+
+    CirclePosition() {
+      x = 0.0f;
+      y = 0.0f;
+      radius = 0.0f;
+    }
     CirclePosition(float x, float y, float radius) : x(x), y(y), radius(radius) {}
-    float getX() {
-      return x;
-    }
-    float getY() {
-      return y;
-    }
     float getLeftX() {
       return x - radius;
     }
@@ -101,35 +105,14 @@ class CirclePosition {
       x = newX;
       y = newY;
     }
-    void incrementX(float value) {
-      x += value;
-    }
-    void decrementX(float value) {
-      x -= value;
-    }
-    void incrementY(float value) {
-      y += value;
-    }
-    void decrementY(float value) {
-      y -= value;
-    }
-  private:
-    // Origin of object is center
-    float x; // center
-    float y; // center
-    float radius;
 };
 
-wilo: implementing ball class that encapsulates pos as well as speed 
-and dir since we now need a different dir per ball.
-running into an error where the pos member is apparently private?
-not familiar enough with c++; how does it work to access a member that
-is itself an object?
 class Ball {
   public:
     CirclePosition pos;
     float speed;
-    int dir;
+    int xDir;
+    int yDir;
 
     Ball(float x, float y, float radius, float speed, int dir) {
       pos.x = x;
@@ -160,7 +143,7 @@ float worldHeight;
 const float ballSpeed = 50.0f;
 const float BALL_RADIUS = 1.0f;
 CirclePosition ballPos(0, 0, BALL_RADIUS);
-std::vector<CirclePosition> balls;
+std::vector<Ball> balls;
 
 
 /* GLFW keys are 32 - 348 so 500 is more than enough */
@@ -201,8 +184,8 @@ void updateBallPos_auto() {
   float minY = 0;
   float maxY = worldHeight;
   /* Move ball at set speed */
-  ballPos.incrementY(ballSpeed * deltaTime * ballYDir);
-  ballPos.incrementX(ballSpeed * deltaTime * ballXDir);
+  ballPos.y += ballSpeed * deltaTime * ballYDir;
+  ballPos.x += ballSpeed * deltaTime * ballXDir;
 
   /* Check right bounds */
   if (ballPos.getRightX() >= maxX) {
@@ -226,35 +209,37 @@ void updateBallPos_auto() {
     ballYDir *= -1;
   } 
 }
-void updateBallPos_auto(CirclePosition ball) {
+
+wilo: working on implementing multiple balls. for some reason the balls aren't moving tho
+void updateBallPos_auto(Ball ball) {
   float minX = 0;
   float maxX = worldWidth;
   float minY = 0;
   float maxY = worldHeight;
   /* Move ball at set speed */
-  ball.incrementY(ballSpeed * deltaTime * ballYDir);
-  ball.incrementX(ballSpeed * deltaTime * ballXDir);
+  ball.pos.y += ball.speed * deltaTime * ball.yDir;
+  ball.pos.x += ball.speed * deltaTime * ball.xDir;
 
   /* Check right bounds */
-  if (ball.getRightX() >= maxX) {
-    ball.setRightX(maxX);
-    ballXDir *= -1;
+  if (ball.pos.getRightX() >= maxX) {
+    ball.pos.setRightX(maxX);
+    ball.xDir *= -1;
   }
   /* Check left bounds */
-  if (ball.getLeftX() <= minX) {
-    ball.setLeftX(minX);
-    ballXDir *= -1;
+  if (ball.pos.getLeftX() <= minX) {
+    ball.pos.setLeftX(minX);
+    ball.xDir *= -1;
   }
 
   /* Check top bounds */
-  if (ball.getTopY() >= maxY) {
-    ball.setTopY(maxY);
-    ballYDir *= -1;
+  if (ball.pos.getTopY() >= maxY) {
+    ball.pos.setTopY(maxY);
+    ball.yDir *= -1;
   }
   /* Check bottom bounds */
-  if (ball.getBottomY() <= minY) {
-    ball.setBottomY(minY);
-    ballYDir *= -1;
+  if (ball.pos.getBottomY() <= minY) {
+    ball.pos.setBottomY(minY);
+    ball.yDir *= -1;
   } 
 }
 void updateBallPos_user() {
@@ -264,16 +249,16 @@ void updateBallPos_user() {
   float maxY = worldHeight;
   float ballPosDelta = ballSpeed * deltaTime;
   if (keyStates[GLFW_KEY_RIGHT] && ballPos.getRightX() < maxX) {
-    ballPos.incrementX(ballPosDelta);
+    ballPos.x += ballPosDelta;
   }
   if (keyStates[GLFW_KEY_LEFT] && ballPos.getLeftX() > minX) {
-    ballPos.decrementX(ballPosDelta);
+    ballPos.x -= ballPosDelta;
   }
   if (keyStates[GLFW_KEY_DOWN] && ballPos.getBottomY() > minY) {
-    ballPos.decrementY(ballPosDelta);
+    ballPos.y -= ballPosDelta;
   }
   if (keyStates[GLFW_KEY_UP] && ballPos.getTopY() < maxY) {
-    ballPos.incrementY(ballPosDelta);
+    ballPos.y += ballPosDelta;
   }
 
 }
@@ -301,10 +286,12 @@ void updateBalls() {
 void spawnBall() {
   // if (!needBallSpawn) return;
   std::cout << "spawn ball" << std::endl;
-  CirclePosition ball(WORLD_CENTER_X, WORLD_CENTER_Y, BALL_RADIUS);
-  ballPos.setCenterX(WORLD_CENTER_X);
-  ballPos.setCenterY(WORLD_CENTER_Y);
-  balls.push_back(ball);
+  // CirclePosition ball(WORLD_CENTER_X, WORLD_CENTER_Y, BALL_RADIUS);
+  // ballPos.setCenterX(WORLD_CENTER_X);
+  // ballPos.setCenterY(WORLD_CENTER_Y);
+  // balls.push_back(ball);
+  Ball newBall(WORLD_CENTER_X, WORLD_CENTER_Y, BALL_RADIUS, ballSpeed, 1);
+  balls.push_back(newBall);
   // needBallSpawn = false;
 }
 
@@ -673,10 +660,6 @@ int main() {
 
   
 
-  /*
-  2/10: idea I have after having the auto ball logic going again is to have mouse click/space bar spawn new balls.
-  This requires rewworking the ball code because now we don't just have The Ball, but instead we have N balls
-  */
 
   // ballPos.x = WORLD_CENTER_X;
   // ballPos.y = WORLD_CENTER_Y;
@@ -696,13 +679,22 @@ int main() {
     glClear(GL_COLOR_BUFFER_BIT);
 
     /* Draw ball */
-    glUniform3f(colorUniformLoc, 0.0f, 0.0f, 0.0f);
+    for (int i=0; i<balls.size(); i++) {
+      Ball ball = balls[i];
+      glUniform3f(colorUniformLoc, 0.0f, 0.0f, 0.0f);
+      model = glm::translate(glm::mat4(1.0f), glm::vec3(ball.pos.x, ball.pos.y, 0.0f));
+      model = glm::scale(model, glm::vec3(ball.pos.radius));
+      glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
+      glBindVertexArray(ballVAO);
+      glDrawArrays(GL_TRIANGLES, 0, ballSegments*3);
+    }
+    // glUniform3f(colorUniformLoc, 0.0f, 0.0f, 0.0f);
+    // // model = glm::translate(glm::mat4(1.0f), glm::vec3(ballPos.x, ballPos.y, 0.0f));
     // model = glm::translate(glm::mat4(1.0f), glm::vec3(ballPos.x, ballPos.y, 0.0f));
-    model = glm::translate(glm::mat4(1.0f), glm::vec3(ballPos.getX(), ballPos.getY(), 0.0f));
-    model = glm::scale(model, glm::vec3(BALL_RADIUS));
-    glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
-    glBindVertexArray(ballVAO);
-    glDrawArrays(GL_TRIANGLES, 0, ballSegments*3);
+    // model = glm::scale(model, glm::vec3(BALL_RADIUS));
+    // glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
+    // glBindVertexArray(ballVAO);
+    // glDrawArrays(GL_TRIANGLES, 0, ballSegments*3);
 
     /* Draw player */
     glUseProgram(shaderProgram);
@@ -774,7 +766,6 @@ int main() {
     /* Keep track of actual FPS */
     now = glfwGetTime();
     if (now - prevFPSUpdate >= 1) {
-      std::cout << "fps: " << actualFPS << std::endl;
       prevFPSUpdate = now;
       actualFPS = framesThisSec;
       framesThisSec = 0;
