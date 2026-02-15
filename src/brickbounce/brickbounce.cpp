@@ -113,13 +113,23 @@ class Ball {
     float speed;
     int xDir;
     int yDir;
+    glm::vec3 color;
 
-    Ball(float x, float y, float radius, float speed, int dir) {
-      pos.x = x;
-      pos.y = y;
-      pos.radius = radius;
-      speed = speed;
-      dir = dir;
+    Ball(float x, float y, float radius, float speed, int xDir, int yDir) {
+      this->pos.x = x;
+      this->pos.y = y;
+      this->pos.radius = radius;
+      this->speed = speed;
+      this->xDir = xDir;
+      this->yDir = yDir;
+    }
+    void setColor(float r, float g, float b) {
+      this->color = glm::vec3(r, g, b);
+    }
+
+    friend std::ostream &operator<<(std::ostream &os, Ball const &ball) {
+      return os << "<Ball: pos=(" << ball.pos.x << ", " << ball.pos.y << ", r=" << ball.pos.radius << "), " << "speed=" << ball.speed << ", xDir=" << ball.xDir << ", yDir=" << ball.yDir << std::endl;
+
     }
 
 
@@ -210,8 +220,7 @@ void updateBallPos_auto() {
   } 
 }
 
-wilo: working on implementing multiple balls. for some reason the balls aren't moving tho
-void updateBallPos_auto(Ball ball) {
+void updateBallPos_auto(Ball &ball) {
   float minX = 0;
   float maxX = worldWidth;
   float minY = 0;
@@ -240,7 +249,19 @@ void updateBallPos_auto(Ball ball) {
   if (ball.pos.getBottomY() <= minY) {
     ball.pos.setBottomY(minY);
     ball.yDir *= -1;
-  } 
+  }
+
+wilo: implemented simple collision. next steps:
+      - implement collision for bottom of player
+      - implement some fancy stuff to make the bounce logic not so simple (currently balls always travel at a 45deg angle)--
+        Refer to this: "No need for any fancy math here. My understanding of these types of games is that the angle the ball comes off of the paddle is determined by where on the paddle it bounces. If it bounces in the middle, then the current angle is preserved. As it bounces closer to the edge of the paddle, the angle is adjusted in the direction of that side of the paddle. Think of the paddle as a rounded surface."
+  /* Check for collision with player */
+  if (ball.pos.getBottomY() <= playerPos.getTopY() && ball.pos.getLeftX() >= playerPos.getLeftX() && ball.pos.getRightX() <= playerPos.getRightX()) {
+    std::cout << "collision" << std::endl;
+    // ball.xDir *= -1;
+    ball.yDir *= -1;
+  }
+
 }
 void updateBallPos_user() {
   float minX = 0;
@@ -282,17 +303,30 @@ void updateBalls() {
   }
 }
 
-// bool needBallSpawn = false;
+
+#include <random>
 void spawnBall() {
-  // if (!needBallSpawn) return;
-  std::cout << "spawn ball" << std::endl;
-  // CirclePosition ball(WORLD_CENTER_X, WORLD_CENTER_Y, BALL_RADIUS);
-  // ballPos.setCenterX(WORLD_CENTER_X);
-  // ballPos.setCenterY(WORLD_CENTER_Y);
-  // balls.push_back(ball);
-  Ball newBall(WORLD_CENTER_X, WORLD_CENTER_Y, BALL_RADIUS, ballSpeed, 1);
+  /* Random direction */
+  int xDir, yDir;
+  // todo: clean this up and move to a more clean function
+  xDir = rand() % 2;
+  if (xDir == 0) xDir = -1;
+  yDir = rand() % 2;
+  if (yDir == 0) yDir = -1;
+
+  float xPos, yPos;
+  xPos = rand() % (int)worldWidth;
+  yPos = rand() % (int)worldHeight;
+
+  float r, g, b;
+  r = (rand() % 256) / 255.0f;
+  g = (rand() % 256) / 255.0f;
+  b = (rand() % 256) / 255.0f;
+
+  
+  Ball newBall(xPos, yPos, BALL_RADIUS, ballSpeed, xDir, yDir);
+  newBall.setColor(r, g, b);
   balls.push_back(newBall);
-  // needBallSpawn = false;
 }
 
 /* Utility function to update struct that keeps track of which keys are
@@ -317,6 +351,7 @@ void updateKeyStates(GLFWwindow* window) {
  * i.e. as long as the user is holding the key down) */
 #define keyJustPressed(key) (keyStates[key] && !prevKeyStates[key])
 #define keyJustReleased(key) (!keyStates[key] && prevKeyStates[key])
+bool isCrossVisible = true;
 void processKeyInput(GLFWwindow* window) {
   updateKeyStates(window);
 
@@ -328,7 +363,20 @@ void processKeyInput(GLFWwindow* window) {
   updateBalls();
 
   if (keyJustPressed(GLFW_KEY_SPACE)) {
-    spawnBall();
+    int ballsToSpawn = 1;
+    for (int i=0; i<ballsToSpawn; i++) {
+      spawnBall();
+    }
+  }
+  if (keyStates[GLFW_KEY_C]) {
+    balls.clear();
+  }
+  if (keyJustPressed(GLFW_KEY_G)) {
+    std::cout << "toggle cross" << std::endl;
+    isCrossVisible = !isCrossVisible;
+  }
+  if (keyJustPressed(GLFW_KEY_N)) {
+    std::cout << balls.size() << " balls" << std::endl;
   }
 
 }
@@ -529,6 +577,8 @@ GLuint createShaderProgram(std::string shaderName) {
 }
 
 int main() {
+  srand(time(0));
+
   float ASPECT_RATIO = 16.0/9.0;
   const int WINDOW_WIDTH = 1200;
   const int WINDOW_HEIGHT = WINDOW_WIDTH / ASPECT_RATIO;
@@ -678,10 +728,11 @@ int main() {
     glClearColor(0.0f, 0.6f, 0.2f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    /* Draw ball */
+    /* Draw balls */
     for (int i=0; i<balls.size(); i++) {
       Ball ball = balls[i];
-      glUniform3f(colorUniformLoc, 0.0f, 0.0f, 0.0f);
+      // std::cout << ball << std::endl;
+      glUniform3fv(colorUniformLoc, 1, glm::value_ptr(ball.color));
       model = glm::translate(glm::mat4(1.0f), glm::vec3(ball.pos.x, ball.pos.y, 0.0f));
       model = glm::scale(model, glm::vec3(ball.pos.radius));
       glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
@@ -723,7 +774,7 @@ int main() {
     glUniform3fv(colorUniformLoc, 1, glm::value_ptr(color));
 
     glBindVertexArray(crossVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 12);
+    if (isCrossVisible) glDrawArrays(GL_TRIANGLES, 0, 12);
 
 
 
