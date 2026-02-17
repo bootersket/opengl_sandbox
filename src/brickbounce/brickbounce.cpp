@@ -220,6 +220,31 @@ void updateBallPos_auto() {
   } 
 }
 
+bool ballHitPlayerTop(Ball ball) {
+  return (ball.pos.getBottomY() <= playerPos.getTopY()
+      && ball.pos.getBottomY() >= playerPos.getBottomY()
+      && ball.pos.getLeftX() >= playerPos.getLeftX()
+      && ball.pos.getRightX() <= playerPos.getRightX());
+}
+
+bool ballHitPlayerBottom(Ball ball) {
+  return (ball.pos.getTopY() <= playerPos.getTopY()
+      && ball.pos.getTopY() >= playerPos.getBottomY()
+      && ball.pos.getLeftX() >= playerPos.getLeftX()
+      && ball.pos.getRightX() <= playerPos.getRightX());
+}
+
+bool ballHitPlayerLeft(Ball ball) {
+  wilo: implementing collision; got top and bottom done but there's some weirdness which I assume is due to the ball hitting the sides of
+          the player. so trying to implement some left/right collision, but at a glance it *seems* that some more math is needed to account
+          for where the ball is along the y axis?
+            it's almost like we need some methods for the ball class of like getLeftY so we can know what the y value is there to see if the ball is
+              at the right y position relative to the player. if that makes sense??
+  return (ball.pos.getRightX() >= playerPos.getLeftX()
+      && ball.pos.getRightX() <= playerPos.getLeftX()
+      && ;
+}
+
 void updateBallPos_auto(Ball &ball) {
   float minX = 0;
   float maxX = worldWidth;
@@ -251,16 +276,23 @@ void updateBallPos_auto(Ball &ball) {
     ball.yDir *= -1;
   }
 
-wilo: implemented simple collision. next steps:
-      - implement collision for bottom of player
-      - implement some fancy stuff to make the bounce logic not so simple (currently balls always travel at a 45deg angle)--
-        Refer to this: "No need for any fancy math here. My understanding of these types of games is that the angle the ball comes off of the paddle is determined by where on the paddle it bounces. If it bounces in the middle, then the current angle is preserved. As it bounces closer to the edge of the paddle, the angle is adjusted in the direction of that side of the paddle. Think of the paddle as a rounded surface."
+// wilo: implemented simple collision. next steps:
+//       - implement collision for bottom of player
+//       - implement some fancy stuff to make the bounce logic not so simple (currently balls always travel at a 45deg angle)--
+//         Refer to this: "No need for any fancy math here. My understanding of these types of games is that the angle the ball comes off of the paddle is determined by where on the paddle it bounces. If it bounces in the middle, then the current angle is preserved. As it bounces closer to the edge of the paddle, the angle is adjusted in the direction of that side of the paddle. Think of the paddle as a rounded surface."
+
   /* Check for collision with player */
-  if (ball.pos.getBottomY() <= playerPos.getTopY() && ball.pos.getLeftX() >= playerPos.getLeftX() && ball.pos.getRightX() <= playerPos.getRightX()) {
-    std::cout << "collision" << std::endl;
-    // ball.xDir *= -1;
+  if (ballHitPlayerTop(ball)) {
     ball.yDir *= -1;
   }
+  if (ballHitPlayerBottom(ball)) {
+    ball.yDir *= -1;
+  }
+  /* Ball hits left side of player */
+  if (ballHitPlayerLeft(ball)) {
+    std::cout << "left collide" << std::endl;
+  }
+  /* Ball hits right side of player */
 
 }
 void updateBallPos_user() {
