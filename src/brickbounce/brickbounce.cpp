@@ -150,7 +150,7 @@ float worldHeight;
 #define WORLD_CENTER_X (worldWidth/2)
 #define WORLD_CENTER_Y (worldHeight/2)
 
-const float ballSpeed = 50.0f;
+const float BALL_SPEED = 50.0f;
 const float BALL_RADIUS = 1.0f;
 CirclePosition ballPos(0, 0, BALL_RADIUS);
 std::vector<Ball> balls;
@@ -194,8 +194,8 @@ void updateBallPos_auto() {
   float minY = 0;
   float maxY = worldHeight;
   /* Move ball at set speed */
-  ballPos.y += ballSpeed * deltaTime * ballYDir;
-  ballPos.x += ballSpeed * deltaTime * ballXDir;
+  ballPos.y += BALL_SPEED * deltaTime * ballYDir;
+  ballPos.x += BALL_SPEED * deltaTime * ballXDir;
 
   /* Check right bounds */
   if (ballPos.getRightX() >= maxX) {
@@ -235,14 +235,9 @@ bool ballHitPlayerBottom(Ball ball) {
 }
 
 bool ballHitPlayerLeft(Ball ball) {
-  wilo: implementing collision; got top and bottom done but there's some weirdness which I assume is due to the ball hitting the sides of
-          the player. so trying to implement some left/right collision, but at a glance it *seems* that some more math is needed to account
-          for where the ball is along the y axis?
-            it's almost like we need some methods for the ball class of like getLeftY so we can know what the y value is there to see if the ball is
-              at the right y position relative to the player. if that makes sense??
-  return (ball.pos.getRightX() >= playerPos.getLeftX()
-      && ball.pos.getRightX() <= playerPos.getLeftX()
-      && ;
+  return (ball.pos.getBottomY() <= playerPos.getTopY()
+      && ball.pos.getRightX() >= playerPos.getLeftX()
+      && ball.pos.getLeftX() < playerPos.getLeftX());
 }
 
 void updateBallPos_auto(Ball &ball) {
@@ -300,7 +295,7 @@ void updateBallPos_user() {
   float maxX = worldWidth;
   float minY = 0;
   float maxY = worldHeight;
-  float ballPosDelta = ballSpeed * deltaTime;
+  float ballPosDelta = BALL_SPEED * deltaTime;
   if (keyStates[GLFW_KEY_RIGHT] && ballPos.getRightX() < maxX) {
     ballPos.x += ballPosDelta;
   }
@@ -356,8 +351,14 @@ void spawnBall() {
   b = (rand() % 256) / 255.0f;
 
   
-  Ball newBall(xPos, yPos, BALL_RADIUS, ballSpeed, xDir, yDir);
+  Ball newBall(xPos, yPos, BALL_RADIUS, BALL_SPEED, xDir, yDir);
   newBall.setColor(r, g, b);
+  balls.push_back(newBall);
+}
+
+void spawnBall(float x, float y, float speed, int xDir, int yDir) {
+  Ball newBall(x, y, BALL_RADIUS, speed, xDir, yDir);
+  newBall.setColor(1.0f, 1.0f, 0.0f);
   balls.push_back(newBall);
 }
 
@@ -749,6 +750,15 @@ int main() {
   // ballPos.setCenterY(WORLD_CENTER_Y);
   playerPos.setBottomY(10.0f);
   playerPos.setCenterX(WORLD_CENTER_X);
+
+  // float speed = 0.0f;
+  float speed = BALL_SPEED;
+WILO: spawning a ball in a very specific location so I can test collisions with side of player.
+        1. why does making very small adjustments to the x value seem to make massive changes (ball misses player entirely)
+        2. realized that I was working on func for detecting ball hitting left of player, but spawning ball to hit right. so fix that.
+        overall keep working on this side collision logic.
+        probably might be easiest to figure out some line equation and use geometry and shit to calculate where the ball should be, etc.
+  spawnBall(worldWidth - 2.0f, worldHeight, BALL_SPEED, -1, -1);
 
   /*====================================
    *            RENDER LOOP
