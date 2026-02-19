@@ -332,6 +332,11 @@ void updateBalls() {
 
 
 #include <random>
+WILO: working on spawning ball in specific location to work out left/right player collision. running into some weirdness with that.
+so decided hey let's make some functionality to delete balls after a certain amount of time so I can hit a button to spawn a specific ball, and
+it'll bounce for a bit but then vanish (due to being on a timer).
+The reason for this is because, for some reason, using the same spawnBall call right before the render loop yields different results
+than if I have the same spawnBall call in processKeyInput. Weirdddddddd.
 void spawnBall() {
   /* Random direction */
   int xDir, yDir;
@@ -354,6 +359,8 @@ void spawnBall() {
   Ball newBall(xPos, yPos, BALL_RADIUS, BALL_SPEED, xDir, yDir);
   newBall.setColor(r, g, b);
   balls.push_back(newBall);
+
+  // return newBall;
 }
 
 void spawnBall(float x, float y, float speed, int xDir, int yDir) {
@@ -385,6 +392,7 @@ void updateKeyStates(GLFWwindow* window) {
 #define keyJustPressed(key) (keyStates[key] && !prevKeyStates[key])
 #define keyJustReleased(key) (!keyStates[key] && prevKeyStates[key])
 bool isCrossVisible = true;
+float startPosX;
 void processKeyInput(GLFWwindow* window) {
   updateKeyStates(window);
 
@@ -410,6 +418,37 @@ void processKeyInput(GLFWwindow* window) {
   }
   if (keyJustPressed(GLFW_KEY_N)) {
     std::cout << balls.size() << " balls" << std::endl;
+  }
+
+
+  // THIS STUFF IS FOR TINKERING; KIND OF MESSY
+  static float speed = 0.0f;
+  if (keyJustPressed(GLFW_KEY_LEFT)) {
+    startPosX -= 0.1f;
+    std::cout << "startPosX: " << startPosX << std::endl;
+  }
+  if (keyJustPressed(GLFW_KEY_RIGHT)) {
+    startPosX += 0.1f;
+  }
+  if (keyJustPressed(GLFW_KEY_UP)) {
+    if (speed == 0.0f) {
+      std::cout << "speed is 0, setting to BALL_SPEED" << std::endl;
+      speed = BALL_SPEED;
+    }
+    else {
+      std::cout << "speed is BALL_SPEED, setting to 0" << std::endl;
+      speed = 0.0f;
+    }
+    // std::cout << "speed is now " << speed << std::endl;
+  }
+  if (keyJustPressed(GLFW_KEY_B)) {
+    // balls.clear();
+    // speed = BALL_SPEED;
+    // speed = 0.0f;
+    // startPosX = 98.1f;
+    // spawnBall(98.1f, worldHeight, BALL_SPEED, -1, -1);
+    spawnBall(98.1f, worldHeight, BALL_SPEED, -1, -1);
+    deleteBallAfterSeconds()
   }
 
 }
@@ -752,13 +791,8 @@ int main() {
   playerPos.setCenterX(WORLD_CENTER_X);
 
   // float speed = 0.0f;
-  float speed = BALL_SPEED;
-WILO: spawning a ball in a very specific location so I can test collisions with side of player.
-        1. why does making very small adjustments to the x value seem to make massive changes (ball misses player entirely)
-        2. realized that I was working on func for detecting ball hitting left of player, but spawning ball to hit right. so fix that.
-        overall keep working on this side collision logic.
-        probably might be easiest to figure out some line equation and use geometry and shit to calculate where the ball should be, etc.
-  spawnBall(worldWidth - 2.0f, worldHeight, BALL_SPEED, -1, -1);
+  startPosX = worldWidth;
+
 
   /*====================================
    *            RENDER LOOP
