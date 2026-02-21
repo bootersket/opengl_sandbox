@@ -71,6 +71,16 @@ class CirclePosition {
       radius = 0.0f;
     }
     CirclePosition(float x, float y, float radius) : x(x), y(y), radius(radius) {}
+
+    /* These getCenter*() funcs may seem redundnant (i.e. "why not get do obj.x or obj.y?")
+     * but the idea is to keep it unambiguous as to what you're getting (i.e. future me
+     * will forget that CirclePosition.x is the center, so this makes it obvious)*/
+    float getCenterX() {
+      return x;
+    }
+    float getCenterY() {
+      return y;
+    }
     float getLeftX() {
       return x - radius;
     }
@@ -109,6 +119,7 @@ class CirclePosition {
 
 class Ball {
   public:
+    unsigned int id;
     CirclePosition pos;
     float speed;
     int xDir;
@@ -116,6 +127,9 @@ class Ball {
     glm::vec3 color;
 
     Ball(float x, float y, float radius, float speed, int xDir, int yDir) {
+      static unsigned int _id = 0;
+      id = _id++;
+
       this->pos.x = x;
       this->pos.y = y;
       this->pos.radius = radius;
@@ -129,7 +143,23 @@ class Ball {
 
     friend std::ostream &operator<<(std::ostream &os, Ball const &ball) {
       return os << "<Ball: pos=(" << ball.pos.x << ", " << ball.pos.y << ", r=" << ball.pos.radius << "), " << "speed=" << ball.speed << ", xDir=" << ball.xDir << ", yDir=" << ball.yDir << std::endl;
+    }
 
+
+WILO: did this cool ID shit to have balls despawn when they're off screen. Collision is finnicky as hell so need to look further into that; i didn't really
+        expect that my first attempt would get all the edge cases. Could take some time to clean up refactor few a few sessions since things are getting pretty hairy.
+        probably got some dead code laying around.
+        Some steps to explore then:
+        * better collision logic
+        * implement bricks that break
+        * implement some sort of nice interface for laying bricks
+        *   ^^ including a file format that you can translate text into brick layout eg. ## ## ##  --> becomes bricks in the game in this layout. Need a sort of grid API really
+        * clean up code; move stuff to other files, consolidate all the settings stuff, etc.
+        * refactor the text display logic to make a more general purpose text "library", so to speak
+        *   ^^ Add alphabet characters? Not super vital at this moment but a nice thing that, outside of transcribing the shape layouts, shouldn't be *too* hard... I think.
+
+    friend bool operator==(const Ball& lhs, const Ball& rhs) {
+      return lhs.id == rhs.id;
     }
 
 
@@ -150,7 +180,7 @@ float worldHeight;
 #define WORLD_CENTER_X (worldWidth/2)
 #define WORLD_CENTER_Y (worldHeight/2)
 
-const float BALL_SPEED = 50.0f;
+const float BALL_SPEED = 30.0f;
 const float BALL_RADIUS = 1.0f;
 CirclePosition ballPos(0, 0, BALL_RADIUS);
 std::vector<Ball> balls;
@@ -188,38 +218,6 @@ int ballXDir = 1;
 int ballYDir = 1;
 bool autoBall = true;
 
-void updateBallPos_auto() {
-  float minX = 0;
-  float maxX = worldWidth;
-  float minY = 0;
-  float maxY = worldHeight;
-  /* Move ball at set speed */
-  ballPos.y += BALL_SPEED * deltaTime * ballYDir;
-  ballPos.x += BALL_SPEED * deltaTime * ballXDir;
-
-  /* Check right bounds */
-  if (ballPos.getRightX() >= maxX) {
-    ballPos.setRightX(maxX);
-    ballXDir *= -1;
-  }
-  /* Check left bounds */
-  if (ballPos.getLeftX() <= minX) {
-    ballPos.setLeftX(minX);
-    ballXDir *= -1;
-  }
-
-  /* Check top bounds */
-  if (ballPos.getTopY() >= maxY) {
-    ballPos.setTopY(maxY);
-    ballYDir *= -1;
-  }
-  /* Check bottom bounds */
-  if (ballPos.getBottomY() <= minY) {
-    ballPos.setBottomY(minY);
-    ballYDir *= -1;
-  } 
-}
-
 bool ballHitPlayerTop(Ball ball) {
   return (ball.pos.getBottomY() <= playerPos.getTopY()
       && ball.pos.getBottomY() >= playerPos.getBottomY()
@@ -235,12 +233,28 @@ bool ballHitPlayerBottom(Ball ball) {
 }
 
 bool ballHitPlayerLeft(Ball ball) {
-  return (ball.pos.getBottomY() <= playerPos.getTopY()
+  // return (ball.pos.getBottomY() <= playerPos.getTopY()
+  //     && ball.pos.getRightX() >= playerPos.getLeftX()
+  //     && ball.pos.getLeftX() < playerPos.getLeftX());
+  return (ball.pos.getCenterY() <= playerPos.getTopY()
+      && ball.pos.getTopY() >= playerPos.getBottomY()
       && ball.pos.getRightX() >= playerPos.getLeftX()
       && ball.pos.getLeftX() < playerPos.getLeftX());
 }
 
+bool ballHitPlayerRight(Ball ball) {
+  return (ball.pos.getCenterY() <= playerPos.getTopY()
+      && ball.pos.getTopY() >= playerPos.getBottomY()
+      && ball.pos.getLeftX() <= playerPos.getRightX()
+      && ball.pos.getRightX() > playerPos.getRightX());
+
+}
+
 void updateBallPos_auto(Ball &ball) {
+  /* Check if ball is offscreen and delete if it is */
+  if (ball.pos.getTopY() < 0.0f) {
+    balls.erase(std::remove(balls.begin(), balls.end(), ball), balls.end());
+  }
   float minX = 0;
   float maxX = worldWidth;
   float minY = 0;
@@ -266,15 +280,17 @@ void updateBallPos_auto(Ball &ball) {
     ball.yDir *= -1;
   }
   /* Check bottom bounds */
-  if (ball.pos.getBottomY() <= minY) {
-    ball.pos.setBottomY(minY);
-    ball.yDir *= -1;
-  }
+  // if (ball.pos.getBottomY() <= minY) {
+  //   ball.pos.setBottomY(minY);
+  //   ball.yDir *= -1;
+  // }
 
-// wilo: implemented simple collision. next steps:
-//       - implement collision for bottom of player
-//       - implement some fancy stuff to make the bounce logic not so simple (currently balls always travel at a 45deg angle)--
-//         Refer to this: "No need for any fancy math here. My understanding of these types of games is that the angle the ball comes off of the paddle is determined by where on the paddle it bounces. If it bounces in the middle, then the current angle is preserved. As it bounces closer to the edge of the paddle, the angle is adjusted in the direction of that side of the paddle. Think of the paddle as a rounded surface."
+
+  /*
+   * Implemented collision. Still can be a bit glitchy, but is 80% solid. 
+      - implement some fancy stuff to make the bounce logic not so simple (currently balls always travel at a 45deg angle)--
+      Refer to this: "No need for any fancy math here. My understanding of these types of games is that the angle the ball comes off of the paddle is determined by where on the paddle it bounces. If it bounces in the middle, then the current angle is preserved. As it bounces closer to the edge of the paddle, the angle is adjusted in the direction of that side of the paddle. Think of the paddle as a rounded surface."
+   * */
 
   /* Check for collision with player */
   if (ballHitPlayerTop(ball)) {
@@ -283,11 +299,12 @@ void updateBallPos_auto(Ball &ball) {
   if (ballHitPlayerBottom(ball)) {
     ball.yDir *= -1;
   }
-  /* Ball hits left side of player */
   if (ballHitPlayerLeft(ball)) {
-    std::cout << "left collide" << std::endl;
+    ball.xDir *= -1;
   }
-  /* Ball hits right side of player */
+  if (ballHitPlayerRight(ball)) {
+    ball.xDir *= -1;
+  }
 
 }
 void updateBallPos_user() {
@@ -311,19 +328,6 @@ void updateBallPos_user() {
 
 }
 
-void updateBallPos() {
-  if (autoBall) updateBallPos_auto();
-  else updateBallPos_user();
-
-  // Check for collision with player
-  // std::cout << "playerPos.y: " << playerPos.y << std::endl;
-  // std::cout << "ballPos.x: " << ballPos.x << std::endl;
-  // todo: fully implement ball player collision
-  // if (BALL_BOTTOM_Y <= playerPos.y) { // todo update after rewriting playerPos logic
-  //   std::cout << "collide" << std::endl;
-  // }
-}
-
 void updateBalls() {
   for (int i=0; i<balls.size(); i++) {
     updateBallPos_auto(balls[i]);
@@ -332,12 +336,7 @@ void updateBalls() {
 
 
 #include <random>
-WILO: working on spawning ball in specific location to work out left/right player collision. running into some weirdness with that.
-so decided hey let's make some functionality to delete balls after a certain amount of time so I can hit a button to spawn a specific ball, and
-it'll bounce for a bit but then vanish (due to being on a timer).
-The reason for this is because, for some reason, using the same spawnBall call right before the render loop yields different results
-than if I have the same spawnBall call in processKeyInput. Weirdddddddd.
-void spawnBall() {
+void spawnBallRandom() {
   /* Random direction */
   int xDir, yDir;
   // todo: clean this up and move to a more clean function
@@ -363,10 +362,12 @@ void spawnBall() {
   // return newBall;
 }
 
-void spawnBall(float x, float y, float speed, int xDir, int yDir) {
+Ball spawnBall(float x, float y, float speed, int xDir, int yDir) {
   Ball newBall(x, y, BALL_RADIUS, speed, xDir, yDir);
   newBall.setColor(1.0f, 1.0f, 0.0f);
   balls.push_back(newBall);
+
+  return newBall;
 }
 
 /* Utility function to update struct that keeps track of which keys are
@@ -384,6 +385,8 @@ void updateKeyStates(GLFWwindow* window) {
 }
 
 
+
+
 /* These macros help facilitate edge-level input detection 
  * I use the phrasing key **just** pressed/released to make it
  * clear that it's not simply checking if the key is currently 
@@ -396,17 +399,18 @@ float startPosX;
 void processKeyInput(GLFWwindow* window) {
   updateKeyStates(window);
 
-  // todo: potentially ambiguous/confusing phrasing here: updatePlayerPos/updateBallPos check for user input within them,
+  // todo: potentially ambiguous/confusing phrasing here: updatePlayerPos check for user input within it,
   // so strictly speaking we're not necessarily updating the pos of these. maybe renaming these to something like handlePlayerPos, etc.
   // might make more sense? Because I also don't necessarily want to clog up processKeyInput with a bunch of key input checks
+  // todo clean up spaghetti. why is updatePlayerPos called in processKeyInputs? Why is there key input logic in updatePlayerPos? I reckon the biggest
+  // issue here is just a function naming issue; the name doesn't indicate
   updatePlayerPos();
-  // updateBallPos();
   updateBalls();
 
-  if (keyJustPressed(GLFW_KEY_SPACE)) {
+  if (keyJustPressed(GLFW_KEY_R)) {
     int ballsToSpawn = 1;
     for (int i=0; i<ballsToSpawn; i++) {
-      spawnBall();
+      spawnBallRandom();
     }
   }
   if (keyStates[GLFW_KEY_C]) {
@@ -421,34 +425,12 @@ void processKeyInput(GLFWwindow* window) {
   }
 
 
-  // THIS STUFF IS FOR TINKERING; KIND OF MESSY
-  static float speed = 0.0f;
-  if (keyJustPressed(GLFW_KEY_LEFT)) {
-    startPosX -= 0.1f;
-    std::cout << "startPosX: " << startPosX << std::endl;
-  }
-  if (keyJustPressed(GLFW_KEY_RIGHT)) {
-    startPosX += 0.1f;
-  }
-  if (keyJustPressed(GLFW_KEY_UP)) {
-    if (speed == 0.0f) {
-      std::cout << "speed is 0, setting to BALL_SPEED" << std::endl;
-      speed = BALL_SPEED;
-    }
-    else {
-      std::cout << "speed is BALL_SPEED, setting to 0" << std::endl;
-      speed = 0.0f;
-    }
-    // std::cout << "speed is now " << speed << std::endl;
-  }
   if (keyJustPressed(GLFW_KEY_B)) {
-    // balls.clear();
-    // speed = BALL_SPEED;
-    // speed = 0.0f;
-    // startPosX = 98.1f;
-    // spawnBall(98.1f, worldHeight, BALL_SPEED, -1, -1);
-    spawnBall(98.1f, worldHeight, BALL_SPEED, -1, -1);
-    deleteBallAfterSeconds()
+    /* spawn ball for collision with right of player */
+    // Ball ball = spawnBall(98.1f, worldHeight, BALL_SPEED, -1, -1);
+
+    /* spawn ball for collision with left of player */
+    Ball ball = spawnBall(1.9f, worldHeight, BALL_SPEED, 1, -1);
   }
 
 }
@@ -857,22 +839,39 @@ int main() {
     /* Update FPS display (without class) */
     /* Any magic numbers here exist to make the FPS display
      * appear in the right spot */
-
+    // todo: this logic for placing text is useful. rewrite/generalize such that I can do something like placeText(x,y,size, etc.)
     glUseProgram(shaderProgram);
     std::vector<int> digits = getDigits(actualFPS);
-    const float scale = 0.2f;
-    const float paddingFromScreenLeft = 1.5f;
-    const float paddingFromScreenTop = 2.5f;
+    float scale = 0.2f;
+    float paddingFromScreenLeft = 1.5f;
+    float paddingFromScreenTop = 2.5f;
     const float digitOffset = 1.5f; /* offset proportional to place value of digits, resulting in visual space between digits */
-    const float transY = worldHeight - paddingFromScreenTop;
+    float transY = worldHeight - paddingFromScreenTop;
+    glUniform3f(colorUniformLoc, 0.6f, 0.0f, 0.6f);
     for (int i=0; i<digits.size(); i++) {
       float transX = (i * digitOffset) + paddingFromScreenLeft;
       model = glm::translate(glm::mat4(1.0f), glm::vec3(transX, transY, 0.0f));
       model = glm::scale(model, glm::vec3(scale));
       glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
-      glUniform3f(colorUniformLoc, 0.6f, 0.0f, 0.6f);
       numberModels[digits[i]].draw();
     }
+
+    /* Display number of existing balls (purpose: to assist with logic for deleting off-screen balls) */
+    glUseProgram(shaderProgram);
+    digits = getDigits(balls.size());
+    scale = 0.2f;
+    paddingFromScreenLeft = worldWidth - 10.0f;
+    paddingFromScreenTop = 2.5f;
+    transY = worldHeight - paddingFromScreenTop;
+    glUniform3f(colorUniformLoc, 0.0f, 0.0f, 0.0f);
+    for (int i=0; i<digits.size(); i++) {
+      float transX = (i * digitOffset) + paddingFromScreenLeft;
+      model = glm::translate(glm::mat4(1.0f), glm::vec3(transX, transY, 0.0f));
+      model = glm::scale(model, glm::vec3(scale));
+      glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
+      numberModels[digits[i]].draw();
+    }
+
 
 
 
