@@ -325,6 +325,14 @@ void updateBalls() {
   }
 }
 
+glm::vec3 randomColor() {
+  float r, g, b;
+  r = (rand() % 256) / 255.0f;
+  g = (rand() % 256) / 255.0f;
+  b = (rand() % 256) / 255.0f;
+
+  return glm::vec3(r, g, b);
+}
 
 #include <random>
 void spawnBallRandom() {
@@ -386,7 +394,6 @@ void updateKeyStates(GLFWwindow* window) {
 #define keyJustPressed(key) (keyStates[key] && !prevKeyStates[key])
 #define keyJustReleased(key) (!keyStates[key] && prevKeyStates[key])
 bool isCrossVisible = true;
-float startPosX;
 void processKeyInput(GLFWwindow* window) {
   updateKeyStates(window);
 
@@ -639,34 +646,9 @@ int main() {
   int projUniformLoc = glGetUniformLocation(shaderProgram, "projection");
 
 
-  float brickBaseWidth, brickBaseHeight;
-  brickBaseWidth = 5.0f;
-  brickBaseHeight = 2.0f;
-  float brickVertices[] = {
-    0.0f, brickBaseHeight,
-    0.0f, 0.0f,
-    brickBaseWidth, 0.0f,
-    brickBaseWidth, brickBaseHeight
-  };
-  unsigned int brickIndices[] = {
-    0, 1, 2,
-    0, 2, 3
-  };
-  GLuint brickVAO, brickVBO, brickEBO;
-  glGenVertexArrays(1, &brickVAO);
-  glBindVertexArray(brickVAO);
-
-  glGenBuffers(1, &brickVBO);
-  glBindBuffer(GL_ARRAY_BUFFER, brickVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(brickVertices), brickVertices, GL_STATIC_DRAW);
-
-  glGenBuffers(1, &brickEBO);
-  glBindBuffer(GL_ARRAY_BUFFER, brickEBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(brickIndices), brickIndices, GL_STATIC_DRAW);
-  glVertexAttribPointer(posAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
-  glEnableVertexAttribArray(posAttrLoc);
 
 
+  /* Set up player stuff */
   float playerVertices[] = {
     0.0f, playerBaseHeight,
     0.0f, 0.0f,
@@ -691,6 +673,36 @@ int main() {
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, playerEBO);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(playerIndices), playerIndices, GL_STATIC_DRAW);
 
+  glVertexAttribPointer(posAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+  glEnableVertexAttribArray(posAttrLoc);
+  
+
+
+  /* Set up brick stuff */
+  float brickBaseWidth, brickBaseHeight;
+  brickBaseWidth = 5.0f;
+  brickBaseHeight = 2.0f;
+  float brickVertices[] = {
+    0.0f, brickBaseHeight,
+    0.0f, 0.0f,
+    brickBaseWidth, 0.0f,
+    brickBaseWidth, brickBaseHeight
+  };
+  unsigned int brickIndices[] = {
+    0, 1, 2,
+    0, 2, 3
+  };
+  GLuint brickVAO, brickVBO, brickEBO;
+  glGenVertexArrays(1, &brickVAO);
+  glBindVertexArray(brickVAO);
+
+  glGenBuffers(1, &brickVBO);
+  glBindBuffer(GL_ARRAY_BUFFER, brickVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(brickVertices), brickVertices, GL_STATIC_DRAW);
+
+  glGenBuffers(1, &brickEBO);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, brickEBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(brickIndices), brickIndices, GL_STATIC_DRAW);
   glVertexAttribPointer(posAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
   glEnableVertexAttribArray(posAttrLoc);
 
@@ -781,21 +793,79 @@ int main() {
   glVertexAttribPointer(posAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
   glEnableVertexAttribArray(posAttrLoc);
 
-  
-
-
-  // ballPos.x = WORLD_CENTER_X;
-  // ballPos.y = WORLD_CENTER_Y;
-  // ballPos.setCenterX(WORLD_CENTER_X);
-  // ballPos.setCenterY(WORLD_CENTER_Y);
   playerPos.setBottomY(10.0f);
   playerPos.setCenterX(WORLD_CENTER_X);
 
-  // float speed = 0.0f;
-  startPosX = worldWidth;
 
   std::vector<RectPosition> bricks;
-  bricks.push_back(RectPosition(50.0f, 50.0f, brickBaseWidth*playerScale, brickBaseHeight*brickScale));
+  int rows = 3;
+  int cols = 10;
+  float brickPaddingX = 1.0f;
+  float brickPaddingY = 1.0f;
+  for (int r=0; r<rows; r++) {
+    for (int c=0; c<cols; c++) {
+      float x = c*brickBaseWidth + c*brickPaddingX;
+      float y = r*brickBaseHeight + r*brickPaddingY;
+      float width = brickBaseWidth * brickScale;
+      float height = brickBaseHeight * brickScale;
+      RectPosition brick(x, y, width, height);
+      bricks.push_back(brick);
+    }
+  }
+
+  /*
+   Explanation of the below math since in a week's time this will look like voodoo.
+   Let's say we have the follow details for our bricks (using horizontal/columns as the example;
+   the logic is the same for vertical/rows)
+   width (of a brick) = 5
+   x pad (space between bricks) = 2
+   (Asterisk indicates padding)
+    _____    _____    _____
+   |_____|**|_____|**|_____|
+   0     5  7     12 14    19
+
+   In this case, the "total brick width" is 19. As can be seen when drawn out, the total brick width
+   is really just the x value of the right of the last brick.
+   For each brick, the starting x value is calculated as: i*w + i*p (i=index of brick, w=width, p=pad)
+   Therefore:
+    0: 0*5 + 0*2 = 0
+    1: 1*5 + 1*2 = 7
+    2: 2*5 + 2*2 = 14
+
+    So to get the desired "total brick width", we need to calculate the left x for the last brick
+    and then add the width to get the right x:
+    i*w + i*p + p
+    Where in this scenario, i = columns-1:
+    (c-1)*w + (c-1)*p + p
+    This could be simplified to (c-1)*w + c*p, but it reflects the intuition a bit more to leave it unsimplified,
+    so leaving it like that.
+   */
+  /* the "total brick width" is really just the x value of the right of the last column of bricks */
+  float totalBrickWidth = (cols-1)*brickBaseWidth + (cols-1)*brickPaddingX + brickBaseWidth;
+  /* the "total brick height" is really just the y value of the top of the last row of bricks */
+  float totalBrickHeight = (rows-1)*brickBaseHeight + (rows-1)*brickPaddingY + brickBaseHeight;
+
+  /* Generate random colors up front because otherwise each iteration of the render loop
+   * will generate new random colors for the bricks, causing an unpleasant flashing effect 
+   * (every loop each brick will become a new random color) */
+  std::vector<glm::vec3> randomColors;
+  for (int i=0; i<500; i++) {
+    randomColors.push_back(randomColor());
+  }
+
+// WILO: next steps: now that I can get bricks drawn to the screen, I really need to revamp the collision logic.
+//         a: the current ball-player collision logic is like 60% effective. glitchiness happens extremely easily.
+//         b: the logic is very rigid i.e. it's only for ball-player interaction. But now we have n bricks and there
+//         needs to be collision logic between any of the balls with any of the bricks.
+//         Also want to keep working on the bricklaying logic since right now the bricks are translated to the center
+//         Probably also want to make a Brick class; this can contain position, state (i.e. brick HP, is it cracked, etc.)
+//         Also at some point will want to tinker with some "cracked" effect on bricks. I thought something cool to experiment with is:
+//         Essentially use iterations of random decisions to give a random looking crack pattern: pick a random pos within the brick,
+//         then pick a random direction, then go a random distance, draw a line from A to B, then pick a random direction, go a random distance,
+//         drawn a line, repeat some random number of times (all of these "randoms" would be within a predtermined range so it's not TOO crazy)
+//         Not sure if this is how "cracked"/shatter effects work, but it's my first naive attempt at it and it would be cool to implement and
+//         see how it turns out. Also would need to figure out from a graphics perspective how to draw lines; even further would be cool to figure out
+//         a shatter & fade effect
 
   /*====================================
    *            RENDER LOOP
@@ -808,22 +878,30 @@ int main() {
     glClear(GL_COLOR_BUFFER_BIT);
 
     /* Draw bricks */
-WILO: initial steps of implementing bricks; for some reaosn we get seg fault tho due to the draw call. Investigate this.
+    glUseProgram(shaderProgram);
+    glBindVertexArray(brickVAO);
     for (int i=0; i<bricks.size(); i++) {
       RectPosition brickPos = bricks[i];
-      model = glm::translate(glm::mat4(1.0f), glm::vec3(brickPos.getLeftX(), brickPos.getBottomY(), 0.0f));
-      model = glm::scale(model, glm::vec3(brickScale));
-      glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
-      glUniform3f(colorUniformLoc, 1.0f, 0.1f, 0.1f);
 
-      glBindVertexArray(brickVAO);
+      /* Place bricks in center, horizontally */
+      float transX = brickPos.getLeftX() + WORLD_CENTER_X - totalBrickWidth/2;
+
+      /* Place bricks at the top, with a slight margin from the top edge of the screen */
+      float marginFromTop = 5.0f;
+      float transY = brickPos.getBottomY() + worldHeight - totalBrickHeight - marginFromTop;
+
+      model = glm::translate(glm::mat4(1.0f), glm::vec3(transX, transY, 0.0f));
+      model = glm::scale(model, glm::vec3(brickScale));
+
+      glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
+      glUniform3fv(colorUniformLoc, 1, glm::value_ptr(randomColors[i]));
+
       glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     }
 
     /* Draw balls */
     for (int i=0; i<balls.size(); i++) {
       Ball ball = balls[i];
-      // std::cout << ball << std::endl;
       glUniform3fv(colorUniformLoc, 1, glm::value_ptr(ball.color));
       model = glm::translate(glm::mat4(1.0f), glm::vec3(ball.pos.x, ball.pos.y, 0.0f));
       model = glm::scale(model, glm::vec3(ball.pos.radius));
@@ -831,13 +909,6 @@ WILO: initial steps of implementing bricks; for some reaosn we get seg fault tho
       glBindVertexArray(ballVAO);
       glDrawArrays(GL_TRIANGLES, 0, ballSegments*3);
     }
-    // glUniform3f(colorUniformLoc, 0.0f, 0.0f, 0.0f);
-    // // model = glm::translate(glm::mat4(1.0f), glm::vec3(ballPos.x, ballPos.y, 0.0f));
-    // model = glm::translate(glm::mat4(1.0f), glm::vec3(ballPos.x, ballPos.y, 0.0f));
-    // model = glm::scale(model, glm::vec3(BALL_RADIUS));
-    // glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
-    // glBindVertexArray(ballVAO);
-    // glDrawArrays(GL_TRIANGLES, 0, ballSegments*3);
 
     /* Draw player */
     glUseProgram(shaderProgram);
