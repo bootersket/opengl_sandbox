@@ -16,6 +16,11 @@ void spawnBall();
 // todo move to its own file
 class RectPosition {
   public:
+    // Origin of object is bottom left
+    float x; // left side
+    float y; // bottom
+    float width;
+    float height;
     RectPosition(float x, float y, float width, float height) : x(x), y(y), width(width), height(height) {}
     float getLeftX() {
       return x;
@@ -50,12 +55,6 @@ class RectPosition {
     void decrementX(float value) {
       x -= value;
     }
-  private:
-    // Origin of object is bottom left
-    float x; // left side
-    float y; // bottom
-    float width;
-    float height;
 };
 
 class CirclePosition {
@@ -146,17 +145,6 @@ class Ball {
     }
 
 
-WILO: did this cool ID shit to have balls despawn when they're off screen. Collision is finnicky as hell so need to look further into that; i didn't really
-        expect that my first attempt would get all the edge cases. Could take some time to clean up refactor few a few sessions since things are getting pretty hairy.
-        probably got some dead code laying around.
-        Some steps to explore then:
-        * better collision logic
-        * implement bricks that break
-        * implement some sort of nice interface for laying bricks
-        *   ^^ including a file format that you can translate text into brick layout eg. ## ## ##  --> becomes bricks in the game in this layout. Need a sort of grid API really
-        * clean up code; move stuff to other files, consolidate all the settings stuff, etc.
-        * refactor the text display logic to make a more general purpose text "library", so to speak
-        *   ^^ Add alphabet characters? Not super vital at this moment but a nice thing that, outside of transcribing the shape layouts, shouldn't be *too* hard... I think.
 
     friend bool operator==(const Ball& lhs, const Ball& rhs) {
       return lhs.id == rhs.id;
@@ -164,6 +152,9 @@ WILO: did this cool ID shit to have balls despawn when they're off screen. Colli
 
 
 };
+
+
+const float brickScale = 1.0f;
 
 #define MOVE_SPEED_X 100.0f
 const float playerScale = 1.0f;
@@ -648,6 +639,34 @@ int main() {
   int projUniformLoc = glGetUniformLocation(shaderProgram, "projection");
 
 
+  float brickBaseWidth, brickBaseHeight;
+  brickBaseWidth = 5.0f;
+  brickBaseHeight = 2.0f;
+  float brickVertices[] = {
+    0.0f, brickBaseHeight,
+    0.0f, 0.0f,
+    brickBaseWidth, 0.0f,
+    brickBaseWidth, brickBaseHeight
+  };
+  unsigned int brickIndices[] = {
+    0, 1, 2,
+    0, 2, 3
+  };
+  GLuint brickVAO, brickVBO, brickEBO;
+  glGenVertexArrays(1, &brickVAO);
+  glBindVertexArray(brickVAO);
+
+  glGenBuffers(1, &brickVBO);
+  glBindBuffer(GL_ARRAY_BUFFER, brickVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(brickVertices), brickVertices, GL_STATIC_DRAW);
+
+  glGenBuffers(1, &brickEBO);
+  glBindBuffer(GL_ARRAY_BUFFER, brickEBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(brickIndices), brickIndices, GL_STATIC_DRAW);
+  glVertexAttribPointer(posAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
+  glEnableVertexAttribArray(posAttrLoc);
+
+
   float playerVertices[] = {
     0.0f, playerBaseHeight,
     0.0f, 0.0f,
@@ -775,6 +794,8 @@ int main() {
   // float speed = 0.0f;
   startPosX = worldWidth;
 
+  std::vector<RectPosition> bricks;
+  bricks.push_back(RectPosition(50.0f, 50.0f, brickBaseWidth*playerScale, brickBaseHeight*brickScale));
 
   /*====================================
    *            RENDER LOOP
@@ -785,6 +806,19 @@ int main() {
 
     glClearColor(0.0f, 0.6f, 0.2f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    /* Draw bricks */
+WILO: initial steps of implementing bricks; for some reaosn we get seg fault tho due to the draw call. Investigate this.
+    for (int i=0; i<bricks.size(); i++) {
+      RectPosition brickPos = bricks[i];
+      model = glm::translate(glm::mat4(1.0f), glm::vec3(brickPos.getLeftX(), brickPos.getBottomY(), 0.0f));
+      model = glm::scale(model, glm::vec3(brickScale));
+      glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
+      glUniform3f(colorUniformLoc, 1.0f, 0.1f, 0.1f);
+
+      glBindVertexArray(brickVAO);
+      glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    }
 
     /* Draw balls */
     for (int i=0; i<balls.size(); i++) {
@@ -906,6 +940,16 @@ int main() {
 
 
 /*
+
+   2/21:
+        Some steps to explore then:
+        * better collision logic
+        * implement bricks that break
+        * implement some sort of nice interface for laying bricks
+        *   ^^ including a file format that you can translate text into brick layout eg. ## ## ##  --> becomes bricks in the game in this layout. Need a sort of grid API really
+        * clean up code; move stuff to other files, consolidate all the settings stuff, etc.
+        * refactor the text display logic to make a more general purpose text "library", so to speak
+        *   ^^ Add alphabet characters? Not super vital at this moment but a nice thing that, outside of transcribing the shape layouts, shouldn't be *too* hard... I think.
  *todo thoughts on restructuring classes & shit:
  - have different types of classes:
     - model/mesh -> has draw() command, but no knowledge of shaders, transforms, etc
