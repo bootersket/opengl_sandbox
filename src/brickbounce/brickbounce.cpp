@@ -155,6 +155,8 @@ class Ball {
 
 
 const float brickScale = 1.0f;
+const float brickBaseWidth = 5.0f;
+const float brickBaseHeight = 2.0f;
 
 #define MOVE_SPEED_X 100.0f
 const float playerScale = 1.0f;
@@ -628,6 +630,122 @@ GLuint createShaderProgram(std::string shaderName) {
   return program;
 }
 
+class BrickScene {
+  /*
+   * A BrickScene is an encaspulation of a group of bricks
+   * */
+  public:
+    std::vector<RectPosition> bricks;
+    float sceneWidth;
+    float sceneHeight;
+
+};
+
+BrickScene createBrickScene(int rows, int cols) {
+  const float brickPaddingX = 1.0f;
+  const float brickPaddingY = 1.0f;
+
+  BrickScene brickScene;
+
+  for (int r=0; r<rows; r++) {
+    for (int c=0; c<cols; c++) {
+      float x = c*brickBaseWidth + c*brickPaddingX;
+      float y = r*brickBaseHeight + r*brickPaddingY;
+      float width = brickBaseWidth * brickScale;
+      float height = brickBaseHeight * brickScale;
+      RectPosition brick(x, y, width, height);
+      brickScene.bricks.push_back(brick);
+    }
+  }
+
+  /*
+   Explanation of the below math since in a week's time this will look like voodoo.
+   Let's say we have the follow details for our bricks (using horizontal/columns as the example;
+   the logic is the same for vertical/rows)
+   width (of a brick) = 5
+   x pad (space between bricks) = 2
+   (Asterisk indicates padding)
+    _____    _____    _____
+   |_____|**|_____|**|_____|
+   0     5  7     12 14    19
+
+   In this case, the "total brick width" is 19. As can be seen when drawn out, the total brick width
+   is really just the x value of the right of the last brick.
+   For each brick, the starting x value is calculated as: i*w + i*p (i=index of brick, w=width, p=pad)
+   Therefore:
+    0: 0*5 + 0*2 = 0
+    1: 1*5 + 1*2 = 7
+    2: 2*5 + 2*2 = 14
+
+    So to get the desired "total brick width", we need to calculate the left x for the last brick
+    and then add the width to get the right x:
+    i*w + i*p + p
+    Where in this scenario, i = columns-1:
+    (c-1)*w + (c-1)*p + p
+    This could be simplified to (c-1)*w + c*p, but it reflects the intuition a bit more to leave it unsimplified,
+    so leaving it like that.
+   */
+  /* the "total brick width" is really just the x value of the right of the last column of bricks */
+  float totalBrickWidth = (cols-1)*brickBaseWidth + (cols-1)*brickPaddingX + brickBaseWidth;
+  /* the "total brick height" is really just the y value of the top of the last row of bricks */
+  float totalBrickHeight = (rows-1)*brickBaseHeight + (rows-1)*brickPaddingY + brickBaseHeight;
+
+  brickScene.sceneWidth = totalBrickWidth;
+  brickScene.sceneHeight = totalBrickHeight;
+
+  return brickScene;
+}
+
+
+
+BrickScene createBrickSceneFromFile(std::string filename) {
+  std::string line;
+  std::ifstream File(filename);
+  std::vector<std::vector<bool>> layout; /* 2d list representing brick scene layout */
+  while (getline(File, line)) {
+    std::cout << line << std::endl;
+    std::vector<bool> row;
+    for (char& c : line) {
+      bool isBrick = (c == '#');
+      row.push_back(isBrick);
+    }
+    layout.push_back(row);
+  }
+
+  /* Reverse because (0,0) is bottom left of screen, so the verticality is reversed */
+  std::reverse(layout.begin(), layout.end());
+
+  const float brickPaddingX = 1.0f;
+  const float brickPaddingY = 1.0f;
+
+  int rows = layout.size();
+  int cols = layout[0].size();
+
+  BrickScene brickScene;
+  for (int r=0; r<rows; r++) {
+    for (int c=0; c<cols; c++) {
+      if (!layout[r][c]) continue;
+
+      float x = c*brickBaseWidth + c*brickPaddingX;
+      float y = r*brickBaseHeight + r*brickPaddingY;
+      float width = brickBaseWidth * brickScale;
+      float height = brickBaseHeight * brickScale;
+
+      RectPosition brick(x, y, width, height);
+      brickScene.bricks.push_back(brick);
+    }
+  }
+
+  float sceneWidth = (cols-1)*brickBaseWidth + (cols-1)*brickPaddingX + brickBaseWidth;
+  float sceneHeight = (rows-1)*brickBaseHeight + (rows-1)*brickPaddingY + brickBaseHeight;
+
+  brickScene.sceneWidth = sceneWidth;
+  brickScene.sceneHeight = sceneHeight;
+
+  return brickScene;
+
+}
+
 int main() {
   srand(time(0));
 
@@ -679,9 +797,6 @@ int main() {
 
 
   /* Set up brick stuff */
-  float brickBaseWidth, brickBaseHeight;
-  brickBaseWidth = 5.0f;
-  brickBaseHeight = 2.0f;
   float brickVertices[] = {
     0.0f, brickBaseHeight,
     0.0f, 0.0f,
@@ -796,54 +911,16 @@ int main() {
   playerPos.setBottomY(10.0f);
   playerPos.setCenterX(WORLD_CENTER_X);
 
+WILO: iimplemented brick scene layouts from files. code is kindaaaaa messy.
+        but keep chugging along. Was going to look into adding cool effects like 
+        black border around bricks, etc. could also mess with textuyres.
+        and of course work on collision revamp!
 
-  std::vector<RectPosition> bricks;
-  int rows = 3;
+
+  int rows = 5;
   int cols = 10;
-  float brickPaddingX = 1.0f;
-  float brickPaddingY = 1.0f;
-  for (int r=0; r<rows; r++) {
-    for (int c=0; c<cols; c++) {
-      float x = c*brickBaseWidth + c*brickPaddingX;
-      float y = r*brickBaseHeight + r*brickPaddingY;
-      float width = brickBaseWidth * brickScale;
-      float height = brickBaseHeight * brickScale;
-      RectPosition brick(x, y, width, height);
-      bricks.push_back(brick);
-    }
-  }
-
-  /*
-   Explanation of the below math since in a week's time this will look like voodoo.
-   Let's say we have the follow details for our bricks (using horizontal/columns as the example;
-   the logic is the same for vertical/rows)
-   width (of a brick) = 5
-   x pad (space between bricks) = 2
-   (Asterisk indicates padding)
-    _____    _____    _____
-   |_____|**|_____|**|_____|
-   0     5  7     12 14    19
-
-   In this case, the "total brick width" is 19. As can be seen when drawn out, the total brick width
-   is really just the x value of the right of the last brick.
-   For each brick, the starting x value is calculated as: i*w + i*p (i=index of brick, w=width, p=pad)
-   Therefore:
-    0: 0*5 + 0*2 = 0
-    1: 1*5 + 1*2 = 7
-    2: 2*5 + 2*2 = 14
-
-    So to get the desired "total brick width", we need to calculate the left x for the last brick
-    and then add the width to get the right x:
-    i*w + i*p + p
-    Where in this scenario, i = columns-1:
-    (c-1)*w + (c-1)*p + p
-    This could be simplified to (c-1)*w + c*p, but it reflects the intuition a bit more to leave it unsimplified,
-    so leaving it like that.
-   */
-  /* the "total brick width" is really just the x value of the right of the last column of bricks */
-  float totalBrickWidth = (cols-1)*brickBaseWidth + (cols-1)*brickPaddingX + brickBaseWidth;
-  /* the "total brick height" is really just the y value of the top of the last row of bricks */
-  float totalBrickHeight = (rows-1)*brickBaseHeight + (rows-1)*brickPaddingY + brickBaseHeight;
+  // BrickScene brickScene = createBrickScene(rows, cols);
+  BrickScene brickScene = createBrickSceneFromFile("level1.scene");
 
   /* Generate random colors up front because otherwise each iteration of the render loop
    * will generate new random colors for the bricks, causing an unpleasant flashing effect 
@@ -880,21 +957,22 @@ int main() {
     /* Draw bricks */
     glUseProgram(shaderProgram);
     glBindVertexArray(brickVAO);
-    for (int i=0; i<bricks.size(); i++) {
-      RectPosition brickPos = bricks[i];
+    for (int i=0; i<brickScene.bricks.size(); i++) {
+      RectPosition brickPos = brickScene.bricks[i];
 
       /* Place bricks in center, horizontally */
-      float transX = brickPos.getLeftX() + WORLD_CENTER_X - totalBrickWidth/2;
+      float transX = brickPos.getLeftX() + WORLD_CENTER_X - brickScene.sceneWidth/2;
 
       /* Place bricks at the top, with a slight margin from the top edge of the screen */
       float marginFromTop = 5.0f;
-      float transY = brickPos.getBottomY() + worldHeight - totalBrickHeight - marginFromTop;
+      float transY = brickPos.getBottomY() + worldHeight - brickScene.sceneHeight - marginFromTop;
 
       model = glm::translate(glm::mat4(1.0f), glm::vec3(transX, transY, 0.0f));
       model = glm::scale(model, glm::vec3(brickScale));
 
       glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
-      glUniform3fv(colorUniformLoc, 1, glm::value_ptr(randomColors[i]));
+      // glUniform3fv(colorUniformLoc, 1, glm::value_ptr(randomColors[i]));
+      glUniform3f(colorUniformLoc, 0.03f, .92f, .83f);
 
       glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     }
