@@ -10,6 +10,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "numbers.hpp"
+#include "mesh.hpp"
 
 void spawnBall();
 
@@ -154,14 +155,10 @@ class Ball {
 };
 
 
-const float brickScale = 1.0f;
-const float brickBaseWidth = 5.0f;
-const float brickBaseHeight = 2.0f;
 
 #define MOVE_SPEED_X 100.0f
-const float playerScale = 1.0f;
-const float playerBaseWidth = 5.0f;
-const float playerBaseHeight = 1.0f;
+// const float playerBaseWidth = 5.0f;
+// const float playerBaseHeight = 1.0f;
 RectPosition playerPos(0.0f, 0.0f, playerBaseWidth*playerScale, playerBaseHeight*playerScale);
 
 
@@ -765,61 +762,18 @@ int main() {
 
 
 
+  Mesh playerMesh = meshSetup_player(posAttrLoc);
+  Mesh brickMesh = meshSetup_brick(posAttrLoc);
+  Mesh crossMesh = meshSetup_cross(posAttrLoc);
+WILO: refactored code a bit to put mesh creation logic in its own file. Haven't replaced all vertex setup logic
+        with it tho--i've only done these three. also need to do ball, numbers(?), etc.
+        Also think about what other functionality this Mesh class should have because right now it's pretty superfluous.
+        I would be just as fine having a function that did the same setup and returned the vao. There's really no
+        purpose for this entire Mesh class anyways, as the vbo and ebo members are pretty useless.
 
-  /* Set up player stuff */
-  float playerVertices[] = {
-    0.0f, playerBaseHeight,
-    0.0f, 0.0f,
-    playerBaseWidth, 0.0f,
-    playerBaseWidth, playerBaseHeight
-  };
-
-  unsigned int playerIndices[] = {
-    0, 1, 2,
-    0, 2, 3
-  };
-
-  GLuint playerVAO, playerVBO, playerEBO;
-  glGenVertexArrays(1, &playerVAO);
-  glBindVertexArray(playerVAO);
-
-  glGenBuffers(1, &playerVBO);
-  glBindBuffer(GL_ARRAY_BUFFER, playerVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(playerVertices), playerVertices, GL_STATIC_DRAW);
-
-  glGenBuffers(1, &playerEBO);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, playerEBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(playerIndices), playerIndices, GL_STATIC_DRAW);
-
-  glVertexAttribPointer(posAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
-  glEnableVertexAttribArray(posAttrLoc);
   
 
 
-  /* Set up brick stuff */
-  float brickVertices[] = {
-    0.0f, brickBaseHeight,
-    0.0f, 0.0f,
-    brickBaseWidth, 0.0f,
-    brickBaseWidth, brickBaseHeight
-  };
-  unsigned int brickIndices[] = {
-    0, 1, 2,
-    0, 2, 3
-  };
-  GLuint brickVAO, brickVBO, brickEBO;
-  glGenVertexArrays(1, &brickVAO);
-  glBindVertexArray(brickVAO);
-
-  glGenBuffers(1, &brickVBO);
-  glBindBuffer(GL_ARRAY_BUFFER, brickVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(brickVertices), brickVertices, GL_STATIC_DRAW);
-
-  glGenBuffers(1, &brickEBO);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, brickEBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(brickIndices), brickIndices, GL_STATIC_DRAW);
-  glVertexAttribPointer(posAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
-  glEnableVertexAttribArray(posAttrLoc);
 
 
   glm::mat4 model = glm::mat4(1.0f);
@@ -876,45 +830,9 @@ int main() {
   glfwSwapInterval(0); // disable vsync
 
 
-  // Draw cross bars for tinkering
-  float crossThickness = 0.100f;
-  float width = 10.0f;
-  float height = 10.0f;
-  float crossVertices[] = {
-    // Vertical bar
-    crossThickness, worldHeight,
-    crossThickness, -worldHeight,
-    -crossThickness, -worldHeight,
-    -crossThickness, -worldHeight,
-    -crossThickness, worldHeight,
-    crossThickness, worldHeight,
-
-    // Horizontal bar
-    -worldWidth, crossThickness,
-    -worldWidth, -crossThickness,
-    worldWidth, -crossThickness,
-
-    -worldWidth, crossThickness,
-    worldWidth, crossThickness,
-    worldWidth, -crossThickness,
-  };
-
-  GLuint crossVAO, crossVBO;
-  glGenVertexArrays(1, &crossVAO);
-  glBindVertexArray(crossVAO);
-  glGenBuffers(1, &crossVBO);
-  glBindBuffer(GL_ARRAY_BUFFER, crossVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(crossVertices), crossVertices, GL_STATIC_DRAW);
-  glVertexAttribPointer(posAttrLoc, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)0);
-  glEnableVertexAttribArray(posAttrLoc);
 
   playerPos.setBottomY(10.0f);
   playerPos.setCenterX(WORLD_CENTER_X);
-
-WILO: iimplemented brick scene layouts from files. code is kindaaaaa messy.
-        but keep chugging along. Was going to look into adding cool effects like 
-        black border around bricks, etc. could also mess with textuyres.
-        and of course work on collision revamp!
 
 
   int rows = 5;
@@ -956,7 +874,7 @@ WILO: iimplemented brick scene layouts from files. code is kindaaaaa messy.
 
     /* Draw bricks */
     glUseProgram(shaderProgram);
-    glBindVertexArray(brickVAO);
+    glBindVertexArray(brickMesh.vao);
     for (int i=0; i<brickScene.bricks.size(); i++) {
       RectPosition brickPos = brickScene.bricks[i];
 
@@ -995,7 +913,7 @@ WILO: iimplemented brick scene layouts from files. code is kindaaaaa messy.
     glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
     glUniform3f(colorUniformLoc, 0.0f, 1.0f, 0.5f);
 
-    glBindVertexArray(playerVAO);
+    glBindVertexArray(playerMesh.vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     /* Update FPS display */
@@ -1014,7 +932,7 @@ WILO: iimplemented brick scene layouts from files. code is kindaaaaa messy.
     glm::vec3 color = glm::vec3(0.0f, 0.0f, 0.0f);
     glUniform3fv(colorUniformLoc, 1, glm::value_ptr(color));
 
-    glBindVertexArray(crossVAO);
+    glBindVertexArray(crossMesh.vao);
     if (isCrossVisible) glDrawArrays(GL_TRIANGLES, 0, 12);
 
 
