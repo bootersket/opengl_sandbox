@@ -9,11 +9,25 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <fstream>
+#include <iterator>
 #include <sstream>
 #include <math.h>
 #include <filesystem>
 #include <vector>
 #include "shader.hpp"
+
+// todo maybe not the cleanest layout of this info as it could get out of sync, but at least it's all in one place which is an improvement over having a bunch of magic numbers instead of named macros
+#define TEX_UNIT__IMAGE GL_TEXTURE0
+#define TEX_INDEX__IMAGE 0
+
+
+#define TEX_UNIT__PRE_LUT GL_TEXTURE1
+#define TEX_INDEX__PRE_LUT 1
+
+#define TEX_UNIT__POST_LUT GL_TEXTURE2
+#define TEX_INDEX__POST_LUT 2
+
+#define validateLoc(loc) { if (loc == -1) std::cout << "ERROR: problem getting loc: " << #loc << std::endl; }
 
 class TextureFileMapping {
     public:
@@ -63,16 +77,16 @@ class TextureFileMapping {
 };
 
 
-float g_lutValue = 1.0f;
+float g_gammaExponent = 1.0f;
 glm::mat3 g_colorMatrix;
 
 void updateColorMatrix();
-void updateLut();
+void updateGammaExponent();
+void updateBlackPointValue();
 void computeLutAndLoadToTex(float);
 std::string boolStr(bool);
 
 
-bool doColorCorrectionInLinear = false;
 void framebuffer_size_callback(GLFWwindow*, int width, int height) {
     glViewport(0, 0, width, height);
 }
@@ -80,6 +94,7 @@ void framebuffer_size_callback(GLFWwindow*, int width, int height) {
 int imageIndex = 0;
 int imageCount = 0;
 bool g_applyCorrections = false;
+bool g_useLut = false;
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_Q && action == GLFW_PRESS) {
         std::cout << "q pressed" << std::endl;
@@ -90,8 +105,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         // std::cout << "apply corrections: " << boolStr(g_applyCorrections) << std::endl;
     }
     if (key == GLFW_KEY_L && action == GLFW_PRESS) {
-        doColorCorrectionInLinear = !doColorCorrectionInLinear;
-        std::cout << "do color correction in linear: " << boolStr(doColorCorrectionInLinear) << std::endl;
+        g_useLut = !g_useLut;
+        std::cout << "g_useLut: " << boolStr(g_useLut) << std::endl;
     }
 
 
@@ -101,6 +116,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
     if ((key == GLFW_KEY_RIGHT || key == GLFW_KEY_D) && action == GLFW_PRESS) {
         imageIndex++;
     }
+
     imageIndex = std::min(imageCount-1, imageIndex);
     imageIndex = std::max(0, imageIndex);
 
@@ -110,6 +126,21 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 std::string boolStr(bool b) {
     if (b) return "true";
     else return "false";
+}
+
+void writeLutDataToFile(std::vector<float> data, std::string filename, int elements, int components) {
+    if (components != 3) {
+        std::cout << "ERROR: writeLutDataToFile() does not support " << components << " components!!" << std::endl;
+        return;
+    }
+    std::ofstream file(filename);
+    for (int i=0; i<elements; i++) {
+        float a, b, c;
+        a = data[i*3 + 0];
+        b = data[i*3 + 1];
+        c = data[i*3 + 2];
+        file << i << "=" << a << ", " << b << ", " << c << "\n";
+    }
 }
 
 
@@ -131,48 +162,116 @@ void updateColorMatrix() {
     float a, b, c;
     char comma;
     int matrixRow = 0;
+    std::vector<std::vector<float>> fileRows;
     while (getline(File, line)) {
         std::cout << line << std::endl;
         std::stringstream ss(line);
-        ss >> a >> comma >> b >> comma >> c;
-        glm::vec3 row = glm::vec3(a, b, c);
-        g_colorMatrix[matrixRow] = row;
-        matrixRow++;
+        ss >> a >> b >> c;
+        std::vector<float> fileRow = {a, b, c};
+        fileRows.push_back(fileRow);
+        // col0 = {a, b, c};
+        // glm::vec3 row = glm::vec3(a, b, c);
+        // g_colorMatrix[matrixRow] = row;
+        // matrixRow++;
     }
+    if (fileRows.size() != 3 || fileRows[0].size() != 3) {
+        std::cout << "ERROR: color matrix is not 3x3." << std::endl;
+        return;
+    }
+
+    /* Gotta do some funky stuff because according to glm/glsl a matrix is columns first.
+    So if I were to do mat[0] = glm::vec3(1, 2, 3) this would define the first column
+    in the matrix. Because colorMatrix.txt is row based (since that's what's intuitive to me),
+    I need to do this funky conversion so that the matrix values are given to opengl correctly.
+    
+    Essentially a matrix like:
+    a b c
+    d e f
+    g h i
+    if passed into a glm::mat like:
+    mat[0] = glm::vec3(a, b, c)
+    mat[1] = glm::vec3(d, e, f)
+    mat[2] = glm::vec3(g, h, i)
+    Would become:
+    a d g
+    b e h
+    c f i
+
+    So the below logic accounts for this.
+    */
+    for (int i=0; i<3; i++) {
+        a = fileRows[0][i];
+        b = fileRows[1][i];
+        c = fileRows[2][i];
+        glm::vec3 col = glm::vec3(a, b, c);
+        g_colorMatrix[i] = col;
+    }
+    // while (getline(File, line)) {
+    //     std::cout << line << std::endl;
+    //     std::stringstream ss(line);
+    //     ss >> a >> comma >> b >> comma >> c;
+    //     glm::vec3 row = glm::vec3(a, b, c);
+    //     g_colorMatrix[matrixRow] = row;
+    //     matrixRow++;
+    // }
+}
+
+std::string blackPointFilePath = "blackpointvalue.txt";
+auto lastWrite_bp = std::filesystem::last_write_time(blackPointFilePath);
+void checkForBlackPointUpdate() {
+    auto currentWrite = std::filesystem::last_write_time(blackPointFilePath);
+    if (currentWrite != lastWrite_bp) {
+        lastWrite_bp = currentWrite;
+        std::cout << "Updating black point value" << std::endl;
+        updateBlackPointValue();
+    }
+}
+
+float g_blackPointValue;
+void updateBlackPointValue() {
+    std::string line;
+    std::ifstream File(blackPointFilePath);
+    float value;
+    while (getline(File, line)) {
+        std::stringstream ss(line);
+        ss >> value;
+    }
+    g_blackPointValue = value;
 }
 
 
 /* Checks if a file containing a scalar been changed. If it was,
 it reads that file and re-computes the 1D LUT and loads the new
 computed values to the texture */
-std::string lutFilePath = "lut.txt";
-auto lastWrite_lut = std::filesystem::last_write_time(lutFilePath);
-void checkForLutUpdate() {
-    auto currentWrite = std::filesystem::last_write_time(lutFilePath);
-    if (currentWrite != lastWrite_lut) {
-        lastWrite_lut = currentWrite;
-        updateLut();
+std::string gammaExponentFilePath = "gammaexponent.txt";
+auto lastWrite_gammaExponent = std::filesystem::last_write_time(gammaExponentFilePath);
+void checkForGammaExponentUpdate() {
+    auto currentWrite = std::filesystem::last_write_time(gammaExponentFilePath);
+    if (currentWrite != lastWrite_gammaExponent) {
+        lastWrite_gammaExponent = currentWrite;
+        updateGammaExponent();
     }
 }
 /* Reads scalar value from file and passes it to function
 that re-computes the 1D LUT and loads the new vlaues to
 the texture */
-void updateLut() {
-    std::cout << "update lut" << std::endl;
+void updateGammaExponent() {
     std::string line;
-    std::ifstream File(lutFilePath);
+    std::ifstream File(gammaExponentFilePath);
     float value;
     while (getline(File, line)) {
         std::stringstream ss(line);
         ss >> value;
     }
     computeLutAndLoadToTex(value);
-    g_lutValue = value;
+    g_gammaExponent = value;
 }
 
-GLuint g_lutTex;
+GLuint g_preLutTex;
+GLuint g_postLutTex;
 void computeLutAndLoadToTex(float value) {
     /* Precision are in bits */
+    // ! pretty sure these values need to map to the / 0xff being done in shader.frag. i.e. if precision changes, the divisor needs to change to reflect it
     int inputPrecision = 8;
     int outputPrecision = 8;
 
@@ -180,29 +279,44 @@ void computeLutAndLoadToTex(float value) {
     int numOfComponents = 3; // Components, channels, etc. Same thing. Meaning R G B, etc.
 
     /* Create LUT texture */
-    std::vector<float> lutData(numOfElements * numOfComponents);
-    // float lutData[numOfElements*numOfComponents];
+    std::vector<float> preLutData(numOfElements * numOfComponents);
+    std::vector<float> postLutData(numOfElements * numOfComponents);
     for (int i=0; i<numOfElements; i++) {
-        // float x = i / 255.0f;
-        float in = i;
+        float in = i / 255.0f; /* LUT output values should be based on normalized inputs */
 
         /* Example curve */
-        float out = pow(in, value);
-        // float out = in / ((1<<inputPrecision)-1) * ((1<<outputPrecision)-1);
+        float preOut = pow(in, value);
+        float postOut = pow(in, 1.0f/value);
 
-        lutData[i*3 + 0] = out;
-        lutData[i*3 + 1] = out;
-        lutData[i*3 + 2] = out;
+        preLutData[i*3 + 0] = preOut;
+        preLutData[i*3 + 1] = preOut;
+        preLutData[i*3 + 2] = preOut;
 
-        std::cout << i << "=" << out << ", " << out << ", " << out << std::endl;
+        postLutData[i*3 + 0] = postOut;
+        postLutData[i*3 + 1] = postOut;
+        postLutData[i*3 + 2] = postOut;
+
     }
-    glBindTexture(GL_TEXTURE_2D, g_lutTex);
+    /* Write data to file for debugging/understanding what values are being computed */
+    writeLutDataToFile(preLutData, "preLut.txt", numOfElements, numOfComponents);
+    writeLutDataToFile(postLutData, "postLut.txt", numOfElements, numOfComponents);
+
+    glBindTexture(GL_TEXTURE_2D, g_preLutTex);
              /*  target         level  internalFormat   width   height  border    format  type      data    */
-    glTexImage2D(GL_TEXTURE_2D, 0,     GL_RGB32F,       256,    1,      0,        GL_RGB, GL_FLOAT, lutData.data());
+    glTexImage2D(GL_TEXTURE_2D, 0,     GL_RGB32F,       256,    1,      0,        GL_RGB, GL_FLOAT, preLutData.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glBindTexture(GL_TEXTURE_2D, g_postLutTex);
+             /*  target         level  internalFormat   width   height  border    format  type      data    */
+    glTexImage2D(GL_TEXTURE_2D, 0,     GL_RGB32F,       256,    1,      0,        GL_RGB, GL_FLOAT, postLutData.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
 }
 
 GLuint createDefaultLutTex() {
@@ -226,10 +340,8 @@ GLuint createDefaultLutTex() {
     glGenTextures(1, &defaultLUTTex);
 
     /* Create LUT data */
-    // float lutData[256*3];
     for (int i=0; i<numOfElements; i++) {
-        // float x = i / 255.0f;
-        float in = i;
+        float in = i / 255.0f; /* LUT output values should be based on normalized inputs */
 
         /* Example curve */
         float out = pow(in, 1.0f);
@@ -238,6 +350,9 @@ GLuint createDefaultLutTex() {
         lutData[i*3 + 1] = out;
         lutData[i*3 + 2] = out;
     }
+    /* Write to file for debugging */
+    writeLutDataToFile(lutData, "defaultLut.txt", numOfElements, numOfComponents);
+
     glBindTexture(GL_TEXTURE_2D, defaultLUTTex);
              // todo: does width need to map to numOfElements? still confused about texture stuff
              /*  target         level  internalFormat   width   height  border    format  type      data    */
@@ -251,7 +366,7 @@ GLuint createDefaultLutTex() {
 }
 
 
-unsigned int createTexture(std::string filename) {
+unsigned int createImageTexture(std::string filename) {
     unsigned int tex;
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
@@ -320,10 +435,15 @@ int main() {
     Shader shader("src/shaders/shader.vert", "src/shaders/shader.frag");
 
     /* TEXTURE STUFF */
-    // unsigned int tex_ref = createTexture("gi_images/gi_0_ref.png"); /* Texture for reference GI275 image */
-    // unsigned int tex_miscal = createTexture("gi_images/gi_0_miscal.png"); /* Texture for miscalibrated GI275 image */
     std::vector<std::string> refImageNames = {
         "color_test_ref.png",
+        "greyramp.png",
+        "patch_lightgrey.png",
+        "patch_darkgrey.png",
+        "patch_red.png",
+        "patch_green.png",
+        "patch_blue.png",
+        "patch_purple.png",
         "landscape_ref.png",
         "gi0_ref.png",
         "gi1_ref.png",
@@ -338,6 +458,13 @@ int main() {
     };
     std::vector<std::string> miscalImageNames = {
         "color_test_miscal.png",
+        "greyramp_miscal.png",
+        "patch_lightgrey_miscal.png",
+        "patch_darkgrey_miscal.png",
+        "patch_red_miscal.png",
+        "patch_green_miscal.png",
+        "patch_blue_miscal.png",
+        "patch_purple_miscal.png",
         "landscape_miscal.png",
         "gi0_miscal.png",
         "gi1_miscal.png",
@@ -350,6 +477,10 @@ int main() {
         "gi8_miscal.png",
         "gi9_miscal.png",
     };
+    if (refImageNames.size() != miscalImageNames.size()) {
+        std::cout << "ERROR: refImageNames and miscalImageNames do not have the same number of elements" << std::endl;
+        return -1;
+    }
 
     std::vector<TextureFileMapping> miscalTextureFileMappings;
 
@@ -362,8 +493,8 @@ int main() {
     for (int i=0; i<refImageNames.size(); i++) {
         std::string refFullPath = imageDir + "/" + refImageNames[i];
         std::string miscalFullPath = imageDir + "/" + miscalImageNames[i];
-        GLuint refTex = createTexture(refFullPath);
-        GLuint miscalTex = createTexture(miscalFullPath);
+        GLuint refTex = createImageTexture(refFullPath);
+        GLuint miscalTex = createImageTexture(miscalFullPath);
         refTextures.push_back(refTex);
         miscalTextures.push_back(miscalTex);
 
@@ -376,8 +507,8 @@ int main() {
     }
 
     /* Set up textures for display status of color correction (hacky way to display text info on screen) */
-    GLuint tex_ccOn = createTexture("C:/Users/gregurichcoli/graphics-learning/opengl_sandbox/color_correction_on.png");
-    GLuint tex_ccOff = createTexture("C:/Users/gregurichcoli/graphics-learning/opengl_sandbox/color_correction_off.png");
+    GLuint tex_ccOn = createImageTexture("C:/Users/gregurichcoli/graphics-learning/opengl_sandbox/color_correction_on.png");
+    GLuint tex_ccOff = createImageTexture("C:/Users/gregurichcoli/graphics-learning/opengl_sandbox/color_correction_off.png");
 
 
 
@@ -425,9 +556,9 @@ int main() {
 
     float scaleFactor = 50.0f;
     float transY = 25.0f;
-    glm::mat4 orig_model = glm::mat4(1.0f);
-    orig_model = glm::translate(orig_model, glm::vec3(0.0f, transY, 0.0f));
-    orig_model = glm::scale(orig_model, glm::vec3(scaleFactor, scaleFactor, 1.0f));
+    glm::mat4 ref_model = glm::mat4(1.0f);
+    ref_model = glm::translate(ref_model, glm::vec3(0.0f, transY, 0.0f));
+    ref_model = glm::scale(ref_model, glm::vec3(scaleFactor, scaleFactor, 1.0f));
 
     glm::mat4 altered_model = glm::mat4(1.0f);
     altered_model = glm::translate(altered_model, glm::vec3(55.0f, transY, 0.0f));
@@ -447,6 +578,22 @@ int main() {
     unsigned int view_loc = glGetUniformLocation(shader.programID, "view");
     unsigned int projection_loc = glGetUniformLocation(shader.programID, "projection");
     unsigned int uColorMatrix_loc = glGetUniformLocation(shader.programID, "uColorMatrix");
+    unsigned int uTex_loc = glGetUniformLocation(shader.programID, "uTex");
+    unsigned int preLut_loc = glGetUniformLocation(shader.programID, "preLut");
+    unsigned int postLut_loc = glGetUniformLocation(shader.programID, "postLut");
+    unsigned int useLut_loc = glGetUniformLocation(shader.programID, "useLut");
+    unsigned int gammaExponent_loc = glGetUniformLocation(shader.programID, "gammaExponent");
+    unsigned int blackPointValue_loc = glGetUniformLocation(shader.programID, "blackPointValue");
+    validateLoc(model_loc);
+    validateLoc(view_loc);
+    validateLoc(projection_loc);
+    validateLoc(uColorMatrix_loc);
+    validateLoc(uTex_loc);
+    validateLoc(preLut_loc);
+    validateLoc(postLut_loc);
+    validateLoc(useLut_loc);
+    validateLoc(gammaExponent_loc);
+    validateLoc(blackPointValue_loc);
 
     glUniformMatrix4fv(view_loc, 1, GL_FALSE, glm::value_ptr(view));
     glUniformMatrix4fv(projection_loc, 1, GL_FALSE, glm::value_ptr(projection));
@@ -459,20 +606,26 @@ int main() {
 
     /* Generate tex here; it gets populated once before render loop 
     and then whenever lut.txt is written to */
-    glGenTextures(1, &g_lutTex);
-    updateLut();
+    glGenTextures(1, &g_preLutTex);
+    glGenTextures(1, &g_postLutTex);
 
     GLuint defaultLUTTex = createDefaultLutTex();
     glm::mat3 defaultColorMatrix(1.0f);
 
     std::string colorMatrixFilePath = "colorMatrix.txt";
+    /* Need these initial calls so the respective variables are populated
+    with values from the .txt files */
     updateColorMatrix();
+    updateGammaExponent();
+    updateBlackPointValue();
+
     while (!glfwWindowShouldClose(window)) {
         /* These funcs check for changes in .txt files that allow me
         to tinker with how the image is being altered in live time */
         checkForColorMatrixUpdate();
-        checkForLutUpdate();
-        /* Check for updates to texture images */
+        checkForGammaExponentUpdate();
+        checkForBlackPointUpdate();
+
         for (int i=0; i<miscalTextureFileMappings.size(); i++) {
             miscalTextureFileMappings[i].checkForUpdate();
         }
@@ -481,8 +634,11 @@ int main() {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glUniform1i(glGetUniformLocation(shader.programID, "uTex"), 0);
-        glUniform1i(glGetUniformLocation(shader.programID, "lut"), 1);
+        // ! technically this can be done just once in this case, but leaving it here so it's more visible as I work on understanding texture stuff
+        glUniform1i(uTex_loc, TEX_INDEX__IMAGE);
+        glUniform1i(preLut_loc, TEX_INDEX__PRE_LUT);
+        glUniform1i(postLut_loc, TEX_INDEX__POST_LUT);
+
 
         glBindVertexArray(vao);
 
@@ -492,7 +648,7 @@ int main() {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, refTextures[imageIndex]);
         shader_ref.use();
-        glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(orig_model));
+        glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(ref_model));
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
 
@@ -519,32 +675,44 @@ int main() {
         shader.use();
         glUniformMatrix3fv(uColorMatrix_loc, 1, GL_FALSE, glm::value_ptr(g_colorMatrix));
 
+        glUniform1i(useLut_loc, g_useLut);
+
         /* Apply different color matrix + LUT depending on if we want to display
         the miscalibrated image with corrections or without */
         if (g_applyCorrections) {
             /* Use matrix read from colorMatrix.txt */
             glUniformMatrix3fv(uColorMatrix_loc, 1, GL_FALSE, glm::value_ptr(g_colorMatrix));
 
-            /* Use LUT computed from value in lut.txt */
-            glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D, g_lutTex);
+            glUniform1f(gammaExponent_loc, g_gammaExponent);
+
+            glUniform1f(blackPointValue_loc, g_blackPointValue);
+
+            /* Pre LUT */
+            glActiveTexture(TEX_UNIT__PRE_LUT);
+            glBindTexture(GL_TEXTURE_2D, g_preLutTex);
+
+            /* Post LUT */
+            glActiveTexture(TEX_UNIT__POST_LUT);
+            glBindTexture(GL_TEXTURE_2D, g_postLutTex);
         }
         else {
             /* Use identity matrix to cause no 3x3 correction effect */
             glUniformMatrix3fv(uColorMatrix_loc, 1, GL_FALSE, glm::value_ptr(defaultColorMatrix));
 
-            /* Use LUT value of 1.0 to cause no 1D LUT effect */
-            glActiveTexture(GL_TEXTURE1);
+            glUniform1f(gammaExponent_loc, 1);
+            glUniform1f(blackPointValue_loc, 0);
+
+            /* Pre LUT */
+            glActiveTexture(TEX_UNIT__PRE_LUT);
+            glBindTexture(GL_TEXTURE_2D, defaultLUTTex);
+
+            /* Post LUT */
+            glActiveTexture(TEX_UNIT__POST_LUT);
             glBindTexture(GL_TEXTURE_2D, defaultLUTTex);
         }
         glUniformMatrix4fv(model_loc, 1, GL_FALSE, glm::value_ptr(altered_model));
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
-
-
-        /*====================
-        TEXT STUFF
-        =====================*/
 
         
         /*====================
