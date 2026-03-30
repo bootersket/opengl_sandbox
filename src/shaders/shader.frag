@@ -15,23 +15,23 @@ uniform float blackPointValue;
 /*============= HELPER FUNCTIONS ===========*/
 /*==========================================*/
 float srgbToLinear(float c) {
-  // if (c <= 0.04045) {
-  //   return c / 12.92;
-  // }
-  // else {
-  //   return pow((c+0.055)/1.055, 2.4);
-  // }
-  return pow(c, 2.4);
+  if (c <= 0.04045) {
+    return c / 12.92;
+  }
+  else {
+    return pow((c+0.055)/1.055, 2.4);
+  }
+  // return pow(c, 2.4);
 }
 
 float linearToSrgb(float c) {
-  // if (c <= 0.0031308) {
-  //   return c * 12.92;
-  // }
-  // else {
-  //   return 1.055*pow(c, 1/2.4) - 0.055;
-  // }
-  return pow(c, 1/2.4);
+  if (c <= 0.0031308) {
+    return c * 12.92;
+  }
+  else {
+    return 1.055*pow(c, 1/2.4) - 0.055;
+  }
+  // return pow(c, 1/2.4);
 }
 
 vec3 srgbToLinear(vec3 color) {
@@ -78,9 +78,10 @@ void main() {
   vec3 color = texture(uTex, vTexCoords).rgb;
 
   if (useLut) {
-    color.r = texture(preLut, vec2(color.r, 0.5)).r;
-    color.g = texture(preLut, vec2(color.g, 0.5)).g;
-    color.b = texture(preLut, vec2(color.b, 0.5)).b;
+    /* Divide by 0xffff because the values in the lut.txt files are in the range of 0-65535 */
+    color.r = texture(preLut, vec2(color.r, 0.5)).r / 0xffff;
+    color.g = texture(preLut, vec2(color.g, 0.5)).g / 0xffff;
+    color.b = texture(preLut, vec2(color.b, 0.5)).b / 0xffff;
   }
   else {
     color = srgbToLinear(color);
@@ -92,9 +93,10 @@ void main() {
   color = clamp(color, 0.0, 1.0);
 
   if (useLut) {
-    color.r = texture(postLut, vec2(color.r, 0.5)).r;
-    color.g = texture(postLut, vec2(color.g, 0.5)).g;
-    color.b = texture(postLut, vec2(color.b, 0.5)).b;
+    /* Divide by 0xffff because the values in the lut.txt files are in the range of 0-65535 */
+    color.r = texture(postLut, vec2(color.r, 0.5)).r / 0xffff;
+    color.g = texture(postLut, vec2(color.g, 0.5)).g / 0xffff;
+    color.b = texture(postLut, vec2(color.b, 0.5)).b / 0xffff;
   }
   else {
     color = linearToSrgb(color);

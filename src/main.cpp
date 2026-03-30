@@ -267,26 +267,96 @@ void updateGammaExponent() {
     g_gammaExponent = value;
 }
 
+float calcPreGammaValue_sRGB(float normalizedIn, float outMax) {
+    float preOut;
+    if (normalizedIn <= 0.04045) preOut = normalizedIn/12.92;
+    else preOut = (pow((normalizedIn+.055)/1.055, 2.4));
+    preOut *= outMax;
+    return preOut;
+}
+float calcPostGammaValue_sRGB(float normalizedIn, float outMax) {
+    float postOut;
+    if (normalizedIn <= .0031308) postOut = normalizedIn * 12.92;
+    else postOut = 1.055*pow(normalizedIn, 1/2.4) - 0.055;
+    postOut *= outMax;
+    return postOut;
+}
+
+/*
+SRGB8 is a custom curve made by Ryan Eakin. I don't yet fully understand the underlying
+reason but here's what he said about it:
+
+    See the sRG8 tab on the gamma curve generator spreadsheet below.  sRGB is commonly
+    used for the B4 gamma table and it approximates a gamma of 2.2.  By default, the
+    After gamma table is always the inverse of the B4 table.  But sRGB has a compatibility
+    problem with the 10-bit gamma tables - it results in rounding errors in the smallest
+    RGB values (lowest 36 8-bit values).  This results in visible banding in gradients on
+    the LCD.  So I invented a new curve that I call sRGB8.  It uses linear stepping for the
+    lowest 36 values, then switches to gamma 2.2 above that.
+
+*/
+float calcPreGammaValue_sRGB8(float normalizedIn, float outMax) {
+    float preOut;
+    if (normalizedIn < .140762) preOut = normalizedIn/4;
+    else preOut = pow((normalizedIn+.278)/1.278, 3);
+    preOut *= outMax;
+    return preOut;
+
+}
+float calcPostGammaValue_sRGB8(float normalizedIn, float outMax) {
+    float postOut;
+    if (normalizedIn < .036168) postOut = normalizedIn * 4;
+    else postOut = pow(1.278*normalizedIn, 1/3)-.278;
+    postOut *= outMax;
+    return postOut;
+}
+
+
 GLuint g_preLutTex;
 GLuint g_postLutTex;
-void computeLutAndLoadToTex(float value) {
+void computeLutAndLoadToTex(float gammaExponent) {
     /* Precision are in bits */
-    // ! pretty sure these values need to map to the / 0xff being done in shader.frag. i.e. if precision changes, the divisor needs to change to reflect it
-    int inputPrecision = 8;
-    int outputPrecision = 8;
+    int inputPrecision = 10;
+    int outputPrecision = 16;
+    float inMax = (1 << inputPrecision) - 1;
+    float outMax = (1 << outputPrecision) - 1;
+    std::cout << "inMax: " << inMax << std::endl;
+    std::cout << "outMax: " << outMax << std::endl;
 
     int numOfElements = 1 << inputPrecision;
     int numOfComponents = 3; // Components, channels, etc. Same thing. Meaning R G B, etc.
+
+    int textureWidth = numOfElements;
 
     /* Create LUT texture */
     std::vector<float> preLutData(numOfElements * numOfComponents);
     std::vector<float> postLutData(numOfElements * numOfComponents);
     for (int i=0; i<numOfElements; i++) {
-        float in = i / 255.0f; /* LUT output values should be based on normalized inputs */
+        // float in = i / 255.0f; /* LUT output values should be based on normalized inputs */
 
-        /* Example curve */
-        float preOut = pow(in, value);
-        float postOut = pow(in, 1.0f/value);
+        // /* Example curve */
+        // float preOut = pow(in, gammaExponent);
+        // float postOut = pow(in, 1.0f/gammaExponent);
+
+        // float in = i / 255.0f; /* LUT output values should be based on normalized inputs */
+        // float in = i / 1023.0f;
+        float in = i;
+
+        /* Calc "before" matrix */
+        float normalizedIn = i / inMax;
+
+
+
+        /* Code to match values calculated in "gamma curve generator - temp.xlsx" */
+        // float preOut = pow(in, gammaExponent);
+        float preOut;
+        // preOut = calcPreGammaValue_sRGB(normalizedIn, outMax);
+        preOut = calcPreGammaValue_sRGB8(normalizedIn, outMax);
+
+        float postOut;
+        // postOut = calcPostGammaValue_sRGB(normalizedIn, outMax);
+        postOut = calcPostGammaValue_sRGB8(normalizedIn, outMax);
+
 
         preLutData[i*3 + 0] = preOut;
         preLutData[i*3 + 1] = preOut;
@@ -296,22 +366,26 @@ void computeLutAndLoadToTex(float value) {
         postLutData[i*3 + 1] = postOut;
         postLutData[i*3 + 2] = postOut;
 
+        std::cout << "\nindex=" << i << std::endl;
+        std::cout << "s=" << normalizedIn << std::endl;
+        std::cout << "16-bit: " << preOut << std::endl;
+
     }
     /* Write data to file for debugging/understanding what values are being computed */
     writeLutDataToFile(preLutData, "preLut.txt", numOfElements, numOfComponents);
     writeLutDataToFile(postLutData, "postLut.txt", numOfElements, numOfComponents);
 
     glBindTexture(GL_TEXTURE_2D, g_preLutTex);
-             /*  target         level  internalFormat   width   height  border    format  type      data    */
-    glTexImage2D(GL_TEXTURE_2D, 0,     GL_RGB32F,       256,    1,      0,        GL_RGB, GL_FLOAT, preLutData.data());
+             /*  target         level  internalFormat   width            height  border    format  type      data    */
+    glTexImage2D(GL_TEXTURE_2D, 0,     GL_RGB32F,       textureWidth,    1,      0,        GL_RGB, GL_FLOAT, preLutData.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     glBindTexture(GL_TEXTURE_2D, g_postLutTex);
-             /*  target         level  internalFormat   width   height  border    format  type      data    */
-    glTexImage2D(GL_TEXTURE_2D, 0,     GL_RGB32F,       256,    1,      0,        GL_RGB, GL_FLOAT, postLutData.data());
+             /*  target         level  internalFormat   width            height  border    format  type      data    */
+    glTexImage2D(GL_TEXTURE_2D, 0,     GL_RGB32F,       textureWidth,    1,      0,        GL_RGB, GL_FLOAT, postLutData.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -377,10 +451,8 @@ unsigned int createImageTexture(std::string filename) {
 
     int texImageWidth, texImageHeight, numOfChannels;
     stbi_set_flip_vertically_on_load(true);
-    unsigned char *data = stbi_load(filename.c_str(), &texImageWidth, &texImageHeight, &numOfChannels, 0);
-    GLenum texFormat = GL_RGB;
-    if (numOfChannels == 3) texFormat = GL_RGB;
-    else if (numOfChannels == 4) texFormat = GL_RGBA;
+    unsigned char *data = stbi_load(filename.c_str(), &texImageWidth, &texImageHeight, &numOfChannels, 4);
+    GLenum texFormat = GL_RGBA;
     
     if (data) {
       glTexImage2D(GL_TEXTURE_2D, 0, texFormat, texImageWidth, texImageHeight, 0, texFormat, GL_UNSIGNED_BYTE, data);
@@ -438,6 +510,7 @@ int main() {
     std::vector<std::string> refImageNames = {
         "color_test_ref.png",
         "greyramp.png",
+        "greyscale_samples.png",
         "patch_lightgrey.png",
         "patch_darkgrey.png",
         "patch_red.png",
@@ -459,6 +532,7 @@ int main() {
     std::vector<std::string> miscalImageNames = {
         "color_test_miscal.png",
         "greyramp_miscal.png",
+        "greyscale_samples_miscal.png",
         "patch_lightgrey_miscal.png",
         "patch_darkgrey_miscal.png",
         "patch_red_miscal.png",
@@ -493,7 +567,9 @@ int main() {
     for (int i=0; i<refImageNames.size(); i++) {
         std::string refFullPath = imageDir + "/" + refImageNames[i];
         std::string miscalFullPath = imageDir + "/" + miscalImageNames[i];
+        std::cout << "making tex for '" << refImageNames[i] << std::endl;
         GLuint refTex = createImageTexture(refFullPath);
+        std::cout << "making tex for '" << miscalImageNames[i] << std::endl;
         GLuint miscalTex = createImageTexture(miscalFullPath);
         refTextures.push_back(refTex);
         miscalTextures.push_back(miscalTex);
