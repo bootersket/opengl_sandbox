@@ -11,7 +11,7 @@ run-main: main
 	./build/main
 
 brick:
-	g++ src/brickbounce/brickbounce.cpp src/brickbounce/numbers.cpp src/brickbounce/mesh.cpp $(GLAD_DIR)/glad.c -I$(THIRD_PARTY) -lglfw -ldl -o build/brickbounce
+	g++ src/brickbounce/brickbounce.cpp src/brickbounce/numbers.cpp src/brickbounce/mesh.cpp src/brickbounce/Geometry.cpp $(GLAD_DIR)/glad.c -I$(THIRD_PARTY) -lglfw -ldl -o build/brickbounce
 
 sandbox:
 	g++ src/sandbox/sandbox.cpp $(GLAD_DIR)/glad.c -I$(THIRD_PARTY) -lglfw -ldl -o build/sandbox

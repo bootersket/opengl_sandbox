@@ -11,154 +11,15 @@
 
 #include "numbers.hpp"
 #include "mesh.hpp"
-
-void spawnBall();
-
-// todo move to its own file
-class RectPosition {
-  public:
-    // Origin of object is bottom left
-    float x; // left side
-    float y; // bottom
-    float width;
-    float height;
-    RectPosition(float x, float y, float width, float height) : x(x), y(y), width(width), height(height) {}
-    float getLeftX() {
-      return x;
-    }
-    float getRightX() {
-      return x + width;
-    }
-    float getBottomY() {
-      return y;
-    }
-    float getTopY() {
-      return y + height;
-    }
-    void setLeftX(float newX) {
-      x = newX;
-    }
-    void setRightX(float newX) {
-      x = newX - width;
-    }
-    void setBottomY(float newY) {
-      y = newY;
-    }
-    void setTopY(float newY) {
-      y = newY - height;
-    }
-    void setCenterX(float newX) {
-      x = newX - width/2;
-    }
-    void incrementX(float value) {
-      x += value;
-    }
-    void decrementX(float value) {
-      x -= value;
-    }
-};
-
-class CirclePosition {
-  public:
-    // Origin of object is center
-    float x; // center
-    float y; // center
-    float radius;
-
-    CirclePosition() {
-      x = 0.0f;
-      y = 0.0f;
-      radius = 0.0f;
-    }
-    CirclePosition(float x, float y, float radius) : x(x), y(y), radius(radius) {}
-
-    /* These getCenter*() funcs may seem redundnant (i.e. "why not get do obj.x or obj.y?")
-     * but the idea is to keep it unambiguous as to what you're getting (i.e. future me
-     * will forget that CirclePosition.x is the center, so this makes it obvious)*/
-    float getCenterX() {
-      return x;
-    }
-    float getCenterY() {
-      return y;
-    }
-    float getLeftX() {
-      return x - radius;
-    }
-    float getRightX() {
-      return x + radius;
-    }
-    float getBottomY() {
-      return y - radius;
-    }
-    float getTopY() {
-      return y + radius;
-    }
-    void setLeftX(float newX) {
-      x = newX + radius;
-    }
-    void setRightX(float newX) {
-      x = newX - radius;
-    }
-    void setBottomY(float newY) {
-      y = newY + radius;
-    }
-    void setTopY(float newY) {
-      y = newY - radius;
-    }
-    void setCenterX(float newX) {
-      x = newX;
-    }
-    void setCenterY(float newY) {
-      y = newY;
-    }
-    void setCenter(float newX, float newY) {
-      x = newX;
-      y = newY;
-    }
-};
-
-class Ball {
-  public:
-    unsigned int id;
-    CirclePosition pos;
-    float speed;
-    int xDir;
-    int yDir;
-    glm::vec3 color;
-
-    Ball(float x, float y, float radius, float speed, int xDir, int yDir) {
-      static unsigned int _id = 0;
-      id = _id++;
-
-      this->pos.x = x;
-      this->pos.y = y;
-      this->pos.radius = radius;
-      this->speed = speed;
-      this->xDir = xDir;
-      this->yDir = yDir;
-    }
-    void setColor(float r, float g, float b) {
-      this->color = glm::vec3(r, g, b);
-    }
-
-    friend std::ostream &operator<<(std::ostream &os, Ball const &ball) {
-      return os << "<Ball: pos=(" << ball.pos.x << ", " << ball.pos.y << ", r=" << ball.pos.radius << "), " << "speed=" << ball.speed << ", xDir=" << ball.xDir << ", yDir=" << ball.yDir << std::endl;
-    }
+#include "Geometry.hpp"
+#include "BrickScene.hpp"
+#include "GameObjects.hpp"
 
 
-
-    friend bool operator==(const Ball& lhs, const Ball& rhs) {
-      return lhs.id == rhs.id;
-    }
-
-
-};
 
 
 
 #define MOVE_SPEED_X 100.0f
-// const float playerBaseWidth = 5.0f;
-// const float playerBaseHeight = 1.0f;
 RectPosition playerPos(0.0f, 0.0f, playerBaseWidth*playerScale, playerBaseHeight*playerScale);
 
 
@@ -172,8 +33,14 @@ float worldHeight;
 
 const float BALL_SPEED = 30.0f;
 const float BALL_RADIUS = 1.0f;
-CirclePosition ballPos(0, 0, BALL_RADIUS);
+CirclePosition userBallPos(10.0f, 10.0f, BALL_RADIUS);
 std::vector<Ball> balls;
+
+BrickScene g_currentScene;
+
+/* This test rect is essentially a brick but with user input baked in, hence
+ * why it's using brick variables for size, etc. */
+RectPosition testRect(0.0f, 0.0f, brickBaseWidth*brickScale, brickBaseHeight*brickScale);
 
 
 /* GLFW keys are 32 - 348 so 500 is more than enough */
@@ -208,38 +75,60 @@ int ballXDir = 1;
 int ballYDir = 1;
 bool autoBall = true;
 
-bool ballHitPlayerTop(Ball ball) {
-  return (ball.pos.getBottomY() <= playerPos.getTopY()
-      && ball.pos.getBottomY() >= playerPos.getBottomY()
-      && ball.pos.getLeftX() >= playerPos.getLeftX()
-      && ball.pos.getRightX() <= playerPos.getRightX());
+// bool ballHitPlayerTop(Ball ball) {
+//   return (ball.pos.getBottomY() <= playerPos.getTopY()
+//       && ball.pos.getBottomY() >= playerPos.getBottomY()
+//       && ball.pos.getLeftX() >= playerPos.getLeftX()
+//       && ball.pos.getRightX() <= playerPos.getRightX());
+// }
+//
+// bool ballHitPlayerBottom(Ball ball) {
+//   return (ball.pos.getTopY() <= playerPos.getTopY()
+//       && ball.pos.getTopY() >= playerPos.getBottomY()
+//       && ball.pos.getLeftX() >= playerPos.getLeftX()
+//       && ball.pos.getRightX() <= playerPos.getRightX());
+// }
+//
+// bool ballHitPlayerLeft(Ball ball) {
+//   return (ball.pos.getCenterY() <= playerPos.getTopY()
+//       && ball.pos.getTopY() >= playerPos.getBottomY()
+//       && ball.pos.getRightX() >= playerPos.getLeftX()
+//       && ball.pos.getLeftX() < playerPos.getLeftX());
+// }
+//
+// bool ballHitPlayerRight(Ball ball) {
+//   return (ball.pos.getCenterY() <= playerPos.getTopY()
+//       && ball.pos.getTopY() >= playerPos.getBottomY()
+//       && ball.pos.getLeftX() <= playerPos.getRightX()
+//       && ball.pos.getRightX() > playerPos.getRightX());
+// }
+//
+void checkBallBrickCollisions(Ball ball) {
+  std::cout << std::endl;
+  for (Brick& brick : g_currentScene.bricks) {
+    std::cout << "brick id#" << brick.id << std::endl;
+    // printf("brick pos: x=%f y=%f w=%d h=%d\n", brick.pos.x, brick.pos.y, brick.pos.);
+    std::cout << "brick pos: " << brick.pos << std::endl;
+    std::cout << "CHECKING BALL BRICK COLLISION" << std::endl;
+    CollisionType collisionType = checkCircleRectCollision(ball.pos, brick.pos);
+    std::cout << "collisionType: " << collisionType << std::endl;
+      switch (collisionType) {
+        case RIGHT:
+        case LEFT:
+          ball.xDir *= -1;
+          brick.hit();
+          break;
+        case TOP:
+        case BOTTOM:
+          ball.yDir *= -1;
+          brick.hit();
+          break;
+      }
+  }
+
 }
 
-bool ballHitPlayerBottom(Ball ball) {
-  return (ball.pos.getTopY() <= playerPos.getTopY()
-      && ball.pos.getTopY() >= playerPos.getBottomY()
-      && ball.pos.getLeftX() >= playerPos.getLeftX()
-      && ball.pos.getRightX() <= playerPos.getRightX());
-}
-
-bool ballHitPlayerLeft(Ball ball) {
-  // return (ball.pos.getBottomY() <= playerPos.getTopY()
-  //     && ball.pos.getRightX() >= playerPos.getLeftX()
-  //     && ball.pos.getLeftX() < playerPos.getLeftX());
-  return (ball.pos.getCenterY() <= playerPos.getTopY()
-      && ball.pos.getTopY() >= playerPos.getBottomY()
-      && ball.pos.getRightX() >= playerPos.getLeftX()
-      && ball.pos.getLeftX() < playerPos.getLeftX());
-}
-
-bool ballHitPlayerRight(Ball ball) {
-  return (ball.pos.getCenterY() <= playerPos.getTopY()
-      && ball.pos.getTopY() >= playerPos.getBottomY()
-      && ball.pos.getLeftX() <= playerPos.getRightX()
-      && ball.pos.getRightX() > playerPos.getRightX());
-
-}
-
+/* Auto means auto movement i.e. the ball bounces around the screen on its own (without direct user control) */
 void updateBallPos_auto(Ball &ball) {
   /* Check if ball is offscreen and delete if it is */
   if (ball.pos.getTopY() < 0.0f) {
@@ -249,22 +138,42 @@ void updateBallPos_auto(Ball &ball) {
   float maxX = worldWidth;
   float minY = 0;
   float maxY = worldHeight;
+
   /* Move ball at set speed */
+  // ball.pos.y += ball.speed * deltaTime * ball.yDir;
+  // ball.pos.x += ball.speed * deltaTime * ball.xDir;
+
   ball.pos.y += ball.speed * deltaTime * ball.yDir;
   ball.pos.x += ball.speed * deltaTime * ball.xDir;
 
-  /* Check right bounds */
+  // TODO!!! unfortunately the collision is still kinda glitchy. THe problem
+  // often seems to occur on a side collision when the paddle is moving
+  // eg. moving to the right and the ball hits the right side)
+  CollisionType collisionType = checkCircleRectCollision(ball.pos, playerPos);
+  switch (collisionType) {
+    case RIGHT:
+    case LEFT:
+      ball.xDir *= -1;
+      break;
+    case TOP:
+    case BOTTOM:
+      ball.yDir *= -1;
+      break;
+  }
+
+
+  /* If ball is at right screen bounds, make it bounce (switch direction) */
   if (ball.pos.getRightX() >= maxX) {
     ball.pos.setRightX(maxX);
     ball.xDir *= -1;
   }
-  /* Check left bounds */
+  /* If ball is at left screen bounds, make it bounce (switch direction) */
   if (ball.pos.getLeftX() <= minX) {
     ball.pos.setLeftX(minX);
     ball.xDir *= -1;
   }
 
-  /* Check top bounds */
+  /* if ball is at top screen bounds, make it bounce (switch direction) */
   if (ball.pos.getTopY() >= maxY) {
     ball.pos.setTopY(maxY);
     ball.yDir *= -1;
@@ -275,6 +184,8 @@ void updateBallPos_auto(Ball &ball) {
   //   ball.yDir *= -1;
   // }
 
+  checkBallBrickCollisions(ball);
+
 
   /*
    * Implemented collision. Still can be a bit glitchy, but is 80% solid. 
@@ -282,40 +193,87 @@ void updateBallPos_auto(Ball &ball) {
       Refer to this: "No need for any fancy math here. My understanding of these types of games is that the angle the ball comes off of the paddle is determined by where on the paddle it bounces. If it bounces in the middle, then the current angle is preserved. As it bounces closer to the edge of the paddle, the angle is adjusted in the direction of that side of the paddle. Think of the paddle as a rounded surface."
    * */
 
+
+  // todo: ive replaced the old collision code with better(ish?) collision code but
+  // leaving this here for now until I understand the differences better
   /* Check for collision with player */
-  if (ballHitPlayerTop(ball)) {
-    ball.yDir *= -1;
-  }
-  if (ballHitPlayerBottom(ball)) {
-    ball.yDir *= -1;
-  }
-  if (ballHitPlayerLeft(ball)) {
-    ball.xDir *= -1;
-  }
-  if (ballHitPlayerRight(ball)) {
-    ball.xDir *= -1;
-  }
+  // if (ballHitPlayerTop(ball)) {
+  //   ball.yDir *= -1;
+  // }
+  // else if (ballHitPlayerBottom(ball)) {
+  //   ball.yDir *= -1;
+  // }
+  // else if (ballHitPlayerLeft(ball)) {
+  //   ball.xDir *= -1;
+  // }
+  // else if (ballHitPlayerRight(ball)) {
+  //   ball.xDir *= -1;
+  // }
+  //
 
 }
+
+/* User controlled ball for debugging purposes */
 void updateBallPos_user() {
   float minX = 0;
   float maxX = worldWidth;
   float minY = 0;
   float maxY = worldHeight;
-  float ballPosDelta = BALL_SPEED * deltaTime;
-  if (keyStates[GLFW_KEY_RIGHT] && ballPos.getRightX() < maxX) {
-    ballPos.x += ballPosDelta;
+  // float ballPosDelta = BALL_SPEED * deltaTime;
+  float ballPosDelta = 10.0f * deltaTime;
+
+  CirclePosition futureUserBallPos(userBallPos);
+  if (keyStates[GLFW_KEY_RIGHT] && userBallPos.getRightX() < maxX) {
+    // userBallPos.x += ballPosDelta;
+    futureUserBallPos.x += ballPosDelta;
   }
-  if (keyStates[GLFW_KEY_LEFT] && ballPos.getLeftX() > minX) {
-    ballPos.x -= ballPosDelta;
+  if (keyStates[GLFW_KEY_LEFT] && userBallPos.getLeftX() > minX) {
+    // userBallPos.x -= ballPosDelta;
+    futureUserBallPos.x -= ballPosDelta;
   }
-  if (keyStates[GLFW_KEY_DOWN] && ballPos.getBottomY() > minY) {
-    ballPos.y -= ballPosDelta;
+  if (keyStates[GLFW_KEY_DOWN] && userBallPos.getBottomY() > minY) {
+    // userBallPos.y -= ballPosDelta;
+    futureUserBallPos.y -= ballPosDelta;
   }
-  if (keyStates[GLFW_KEY_UP] && ballPos.getTopY() < maxY) {
-    ballPos.y += ballPosDelta;
+  if (keyStates[GLFW_KEY_UP] && userBallPos.getTopY() < maxY) {
+    // userBallPos.y += ballPosDelta;
+    futureUserBallPos.y += ballPosDelta;
+  }
+  if (!checkCircleRectCollision(futureUserBallPos, playerPos)) {
+    userBallPos = futureUserBallPos;
+  }
+}
+
+void updateTestRect() {
+  float minX = 0;
+  float maxX = worldWidth;
+  float minY = 0;
+  float maxY = worldHeight;
+  float posDelta = 10.0f * deltaTime;
+  std::cout << "testRect pos: " << testRect << std::endl;
+
+  /* Calc the position if the user input were to go through. Use this
+   * to detect if collision issues would happen, and if so, don't allow the
+   * user input to move the test rect */
+  RectPosition futureTestRectPos(testRect);
+
+  if (keyStates[GLFW_KEY_RIGHT] && testRect.getRightX() < maxX) {
+    futureTestRectPos.x += posDelta;
+  }
+  if (keyStates[GLFW_KEY_LEFT] && testRect.getLeftX() > minX) {
+    futureTestRectPos.x -= posDelta;
+  }
+  if (keyStates[GLFW_KEY_DOWN] && testRect.getBottomY() > minY) {
+    futureTestRectPos.y -= posDelta;
+  }
+  if (keyStates[GLFW_KEY_UP] && testRect.getTopY() < maxY) {
+    futureTestRectPos.y += posDelta;
   }
 
+  /* Check if user input would cause an illegal collision */
+  if (!checkRectRectCollision(futureTestRectPos, playerPos)) {
+    testRect = futureTestRectPos;
+  }
 }
 
 void updateBalls() {
@@ -403,6 +361,8 @@ void processKeyInput(GLFWwindow* window) {
   // issue here is just a function naming issue; the name doesn't indicate
   updatePlayerPos();
   updateBalls();
+  updateBallPos_user();
+  updateTestRect();
 
   if (keyJustPressed(GLFW_KEY_R)) {
     int ballsToSpawn = 1;
@@ -427,7 +387,12 @@ void processKeyInput(GLFWwindow* window) {
     // Ball ball = spawnBall(98.1f, worldHeight, BALL_SPEED, -1, -1);
 
     /* spawn ball for collision with left of player */
-    Ball ball = spawnBall(1.9f, worldHeight, BALL_SPEED, 1, -1);
+    float x = 27.0f;
+    float y = 20.0f;
+    float speed = BALL_SPEED;
+    int xDir = 1;
+    int yDir = 1;
+    Ball ball = spawnBall(x, y, speed, xDir, yDir);
   }
 
 }
@@ -627,121 +592,32 @@ GLuint createShaderProgram(std::string shaderName) {
   return program;
 }
 
-class BrickScene {
-  /*
-   * A BrickScene is an encaspulation of a group of bricks
-   * */
-  public:
-    std::vector<RectPosition> bricks;
-    float sceneWidth;
-    float sceneHeight;
 
-};
+// todo: there was yet another bug I discovered due to a discrepancy between the pos used to draw bricks
+// vs the underlying rectPos object representing the bricks position. this was due to translating the
+// entire brick scene in the render loop: essentially I was commanding to draw the bricks at the center
+// of the screen despite their underlying RectPosition object's not matching the "center of screen" logic.
+// So as a quick fix I've moved that logic to a one-time helper function that just updates the bricks
+// positions to be the center of the screen, and then the render loop code simply draws each brick at the
+// positions given by their RectPosition objects.
+// This func could definitely be named better and have a comment explaining what it is (in other words,
+// make this todo comment a little more profesh)
+void brickSceneSetup() {
+  for (int i=0; i<g_currentScene.bricks.size(); i++) {
+    Brick& brick = g_currentScene.bricks[i];
 
-BrickScene createBrickScene(int rows, int cols) {
-  const float brickPaddingX = 1.0f;
-  const float brickPaddingY = 1.0f;
+    /* Place bricks in center, horizontally */
+    float translatedX = brick.pos.getLeftX() + WORLD_CENTER_X - g_currentScene.sceneWidth/2;
 
-  BrickScene brickScene;
+    /* Place bricks at the top, with a slight margin from the top edge of the screen */
+    float marginFromTop = 5.0f;
+    float translatedY = brick.pos.getBottomY() + worldHeight - g_currentScene.sceneHeight - marginFromTop;
 
-  for (int r=0; r<rows; r++) {
-    for (int c=0; c<cols; c++) {
-      float x = c*brickBaseWidth + c*brickPaddingX;
-      float y = r*brickBaseHeight + r*brickPaddingY;
-      float width = brickBaseWidth * brickScale;
-      float height = brickBaseHeight * brickScale;
-      RectPosition brick(x, y, width, height);
-      brickScene.bricks.push_back(brick);
-    }
+    brick.pos.x = translatedX;
+    brick.pos.y = translatedY;
   }
-
-  /*
-   Explanation of the below math since in a week's time this will look like voodoo.
-   Let's say we have the follow details for our bricks (using horizontal/columns as the example;
-   the logic is the same for vertical/rows)
-   width (of a brick) = 5
-   x pad (space between bricks) = 2
-   (Asterisk indicates padding)
-    _____    _____    _____
-   |_____|**|_____|**|_____|
-   0     5  7     12 14    19
-
-   In this case, the "total brick width" is 19. As can be seen when drawn out, the total brick width
-   is really just the x value of the right of the last brick.
-   For each brick, the starting x value is calculated as: i*w + i*p (i=index of brick, w=width, p=pad)
-   Therefore:
-    0: 0*5 + 0*2 = 0
-    1: 1*5 + 1*2 = 7
-    2: 2*5 + 2*2 = 14
-
-    So to get the desired "total brick width", we need to calculate the left x for the last brick
-    and then add the width to get the right x:
-    i*w + i*p + p
-    Where in this scenario, i = columns-1:
-    (c-1)*w + (c-1)*p + p
-    This could be simplified to (c-1)*w + c*p, but it reflects the intuition a bit more to leave it unsimplified,
-    so leaving it like that.
-   */
-  /* the "total brick width" is really just the x value of the right of the last column of bricks */
-  float totalBrickWidth = (cols-1)*brickBaseWidth + (cols-1)*brickPaddingX + brickBaseWidth;
-  /* the "total brick height" is really just the y value of the top of the last row of bricks */
-  float totalBrickHeight = (rows-1)*brickBaseHeight + (rows-1)*brickPaddingY + brickBaseHeight;
-
-  brickScene.sceneWidth = totalBrickWidth;
-  brickScene.sceneHeight = totalBrickHeight;
-
-  return brickScene;
 }
 
-
-
-BrickScene createBrickSceneFromFile(std::string filename) {
-  std::string line;
-  std::ifstream File(filename);
-  std::vector<std::vector<bool>> layout; /* 2d list representing brick scene layout */
-  while (getline(File, line)) {
-    std::cout << line << std::endl;
-    std::vector<bool> row;
-    for (char& c : line) {
-      bool isBrick = (c == '#');
-      row.push_back(isBrick);
-    }
-    layout.push_back(row);
-  }
-
-  /* Reverse because (0,0) is bottom left of screen, so the verticality is reversed */
-  std::reverse(layout.begin(), layout.end());
-
-  const float brickPaddingX = 1.0f;
-  const float brickPaddingY = 1.0f;
-
-  int rows = layout.size();
-  int cols = layout[0].size();
-
-  BrickScene brickScene;
-  for (int r=0; r<rows; r++) {
-    for (int c=0; c<cols; c++) {
-      if (!layout[r][c]) continue;
-
-      float x = c*brickBaseWidth + c*brickPaddingX;
-      float y = r*brickBaseHeight + r*brickPaddingY;
-      float width = brickBaseWidth * brickScale;
-      float height = brickBaseHeight * brickScale;
-
-      RectPosition brick(x, y, width, height);
-      brickScene.bricks.push_back(brick);
-    }
-  }
-
-  float sceneWidth = (cols-1)*brickBaseWidth + (cols-1)*brickPaddingX + brickBaseWidth;
-  float sceneHeight = (rows-1)*brickBaseHeight + (rows-1)*brickPaddingY + brickBaseHeight;
-
-  brickScene.sceneWidth = sceneWidth;
-  brickScene.sceneHeight = sceneHeight;
-
-  return brickScene;
-
-}
 
 int main() {
   srand(time(0));
@@ -765,16 +641,20 @@ int main() {
   Mesh playerMesh = meshSetup_player(posAttrLoc);
   Mesh brickMesh = meshSetup_brick(posAttrLoc);
   Mesh crossMesh = meshSetup_cross(posAttrLoc);
-WILO: refactored code a bit to put mesh creation logic in its own file. Haven't replaced all vertex setup logic
-        with it tho--i've only done these three. also need to do ball, numbers(?), etc.
-        Also think about what other functionality this Mesh class should have because right now it's pretty superfluous.
-        I would be just as fine having a function that did the same setup and returned the vao. There's really no
-        purpose for this entire Mesh class anyways, as the vbo and ebo members are pretty useless.
+// WILO: refactored code a bit to put mesh creation logic in its own file. Haven't replaced all vertex setup logic
+//         with it tho--i've only done these three. also need to do ball, numbers(?), etc.
+//         Also think about what other functionality this Mesh class should have because right now it's pretty superfluous.
+//         I would be just as fine having a function that did the same setup and returned the vao. There's really no
+//         purpose for this entire Mesh class anyways, as the vbo and ebo members are pretty useless.
 
   
 
 
-
+WILO: fixed bug when implementing ball-brick collision (yet again an issue with hitbox vs mesh position).
+        so now ball and brick collision registers. need to add logic to make the ball bounce off of bricks tho.
+        also add ability to make bricks vanish when broken (rn they just change color to indicate a hit).
+        Could flesh that out to have different HPs of bricks, cool textures/effects, etc. But for now go for
+        a MVP. It's going well!!
 
   glm::mat4 model = glm::mat4(1.0f);
   // model = glm::rotate(model, glm::radians(13.0f), glm::vec3(1.0f, 0.0f, 1.0f));
@@ -835,10 +715,11 @@ WILO: refactored code a bit to put mesh creation logic in its own file. Haven't 
   playerPos.setCenterX(WORLD_CENTER_X);
 
 
-  int rows = 5;
-  int cols = 10;
+  // int rows = 5;
+  // int cols = 10;
   // BrickScene brickScene = createBrickScene(rows, cols);
-  BrickScene brickScene = createBrickSceneFromFile("level1.scene");
+  // BrickScene brickScene = createBrickSceneFromFile("level1.scene");
+  g_currentScene = createBrickSceneFromFile("level1.scene"); // todo change .scene path to be in brickbounce folder
 
   /* Generate random colors up front because otherwise each iteration of the render loop
    * will generate new random colors for the bricks, causing an unpleasant flashing effect 
@@ -862,6 +743,17 @@ WILO: refactored code a bit to put mesh creation logic in its own file. Haven't 
 //         see how it turns out. Also would need to figure out from a graphics perspective how to draw lines; even further would be cool to figure out
 //         a shatter & fade effect
 
+
+  userBallPos.x = WORLD_CENTER_X + 2.0f;
+  userBallPos.y = WORLD_CENTER_Y * .65;
+
+  float testRectStartX = WORLD_CENTER_X + 2.0f;
+  float testRectStartY = WORLD_CENTER_Y * .55;
+  testRect.setBottomY(testRectStartY);
+  testRect.setCenterX(testRectStartX);
+
+  brickSceneSetup();
+
   /*====================================
    *            RENDER LOOP
    * ==================================*/
@@ -872,30 +764,34 @@ WILO: refactored code a bit to put mesh creation logic in its own file. Haven't 
     glClearColor(0.0f, 0.6f, 0.2f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
+
     /* Draw bricks */
     glUseProgram(shaderProgram);
     glBindVertexArray(brickMesh.vao);
-    for (int i=0; i<brickScene.bricks.size(); i++) {
-      RectPosition brickPos = brickScene.bricks[i];
+    for (int i=0; i<g_currentScene.bricks.size(); i++) {
+      // todo should this just be a Brick obj, and below funcs obfuscate the pos member?
+      Brick brick = g_currentScene.bricks[i];
 
-      /* Place bricks in center, horizontally */
-      float transX = brickPos.getLeftX() + WORLD_CENTER_X - brickScene.sceneWidth/2;
-
-      /* Place bricks at the top, with a slight margin from the top edge of the screen */
-      float marginFromTop = 5.0f;
-      float transY = brickPos.getBottomY() + worldHeight - brickScene.sceneHeight - marginFromTop;
+      float transX = brick.pos.getLeftX();
+      float transY = brick.pos.getBottomY();
 
       model = glm::translate(glm::mat4(1.0f), glm::vec3(transX, transY, 0.0f));
       model = glm::scale(model, glm::vec3(brickScale));
 
       glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
       // glUniform3fv(colorUniformLoc, 1, glm::value_ptr(randomColors[i]));
-      glUniform3f(colorUniformLoc, 0.03f, .92f, .83f);
+      if (brick.state == HIT) {
+        glUniform3f(colorUniformLoc, .95f, 0.1f, 0.05f);
+      }
+      else if (brick.state == SOLID) {
+        glUniform3f(colorUniformLoc, 0.03f, .92f, .83f);
+      }
 
       glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     }
 
     /* Draw balls */
+    // todo add a circle mesh setup similar to brick, player, and cross
     for (int i=0; i<balls.size(); i++) {
       Ball ball = balls[i];
       glUniform3fv(colorUniformLoc, 1, glm::value_ptr(ball.color));
@@ -906,6 +802,9 @@ WILO: refactored code a bit to put mesh creation logic in its own file. Haven't 
       glDrawArrays(GL_TRIANGLES, 0, ballSegments*3);
     }
 
+
+
+
     /* Draw player */
     glUseProgram(shaderProgram);
     model = glm::translate(glm::mat4(1.0f), glm::vec3(playerPos.getLeftX(), playerPos.getBottomY(), 0.0f));
@@ -915,6 +814,38 @@ WILO: refactored code a bit to put mesh creation logic in its own file. Haven't 
 
     glBindVertexArray(playerMesh.vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+
+
+    /* Draw test rect (user controlled rect for testing) */
+    model = glm::translate(glm::mat4(1.0f), glm::vec3(testRect.x, testRect.y, 0.0f));
+    model = glm::scale(model, glm::vec3(1.0f)); // todo: temp use playerscale for debugging
+    // model = glm::scale(model, glm::vec3(playerScale)); // todo: temp use playerscale for debugging
+    glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glBindVertexArray(brickMesh.vao);
+    /* Draw the rect a different color when colliding with player rect for testing purposes */
+    if (checkRectRectCollision(testRect, playerPos)) {
+      glUniform3f(colorUniformLoc, 0.8f, 0.1f, 0.0f);
+    }
+    else {
+      glUniform3f(colorUniformLoc, 0.2f, 0.9f, 0.2f);
+    }
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+
+    /* Draw user controlled ball (for testing) */
+    // model = glm::translate(glm::mat4(1.0f), glm::vec3(userBallPos.x, userBallPos.y, 0.0f));
+    // model = glm::scale(model, glm::vec3(1.0f));
+    // glUniformMatrix4fv(modelUniformLoc, 1, GL_FALSE, glm::value_ptr(model));
+    // glBindVertexArray(ballVAO);
+    // if (checkCircleRectCollision(userBallPos, playerPos)) {
+    //   glUniform3f(colorUniformLoc, 0.8f, 0.1f, 0.0f);
+    // }
+    // else {
+    //   glUniform3f(colorUniformLoc, 0.2f, 0.9f, 0.2f);
+    // }
+    // glDrawArrays(GL_TRIANGLES, 0, ballSegments*3);
+
 
     /* Update FPS display */
     // glUseProgram(numberShaderProgram);
